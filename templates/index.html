@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Maison — Discover the World's Finest Hotels{% endblock %}
+
+{% block content %}
+
+<!-- ── Hero ──────────────────────────────────────────────────────────── -->
+<section class="hero">
+    <div class="hero-bg">
+        <img
+            class="hero-bg-photo"
+            src="https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?auto=format&fit=crop&w=2400&q=80"
+            alt=""
+            fetchpriority="high"
+        />
+        <div class="hero-overlay"></div>
+    </div>
+
+    <div class="hero-inner">
+        <div class="hero-eyebrow">
+            <span class="hero-eyebrow-line"></span>
+            <span class="hero-eyebrow-text">Curated Luxury Stays</span>
+        </div>
+
+        <h1>Where every stay<br>becomes a <em>story</em></h1>
+
+        <p class="hero-subtitle">
+            Handpicked five-star properties — from intimate jungle retreats to iconic city palaces — for the world's most discerning travellers.
+        </p>
+
+        <div class="search-panel">
+            <form id="searchForm" class="search-form">
+                <div class="search-form-wrapper">
+                    <input
+                        type="text"
+                        id="cityInput"
+                        class="city-input"
+                        placeholder="Paris, Maldives, Tokyo, Santorini…"
+                        required
+                        autocomplete="off"
+                    />
+                    <button type="submit" class="search-button">
+                        <i class="fas fa-search"></i>
+                        Explore
+                    </button>
+                </div>
+            </form>
+
+            <div id="errorContainer" class="error-message" role="alert" style="display: none;"></div>
+        </div>
+    </div>
+
+    <!-- Scroll hint -->
+    <div class="hero-scroll-hint">
+        <span class="hero-scroll-line"></span>
+        <span class="hero-scroll-text">Scroll</span>
+    </div>
+</section>
+
+<!-- ── Destinations Strip ─────────────────────────────────────────────── -->
+<section class="destinations-section" id="destinationsSection">
+    <div class="destinations-inner">
+        <div class="destinations-header">
+            <div class="destinations-eyebrow">
+                <span class="eyebrow-line"></span>
+                <span class="eyebrow-text">Featured Destinations</span>
+            </div>
+            <h2 class="destinations-title">Where will you<br>go <em>next?</em></h2>
+        </div>
+
+        <div class="destinations-grid">
+
+            <button class="dest-card" data-city="paris" aria-label="Search Paris">
+                <img src="https://images.unsplash.com/photo-1499856374191-b1c2a4c44f31?auto=format&fit=crop&w=800&q=80" alt="Paris" loading="lazy" />
+                <div class="dest-overlay"></div>
+                <div class="dest-content">
+                    <span class="dest-name">Paris</span>
+                    <span class="dest-label">3 Properties</span>
+                </div>
+            </button>
+
+            <button class="dest-card" data-city="maldives" aria-label="Search Maldives">
+                <img src="https://images.unsplash.com/photo-1514282401047-d79a71a590e8?auto=format&fit=crop&w=800&q=80" alt="Maldives" loading="lazy" />
+                <div class="dest-overlay"></div>
+                <div class="dest-content">
+                    <span class="dest-name">Maldives</span>
+                    <span class="dest-label">2 Properties</span>
+                </div>
+            </button>
+
+            <button class="dest-card dest-card--tall" data-city="santorini" aria-label="Search Santorini">
+                <img src="https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=800&q=80" alt="Santorini" loading="lazy" />
+                <div class="dest-overlay"></div>
+                <div class="dest-content">
+                    <span class="dest-name">Santorini</span>
+                    <span class="dest-label">2 Properties</span>
+                </div>
+            </button>
+
+            <button class="dest-card" data-city="bali" aria-label="Search Bali">
+                <img src="https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=800&q=80" alt="Bali" loading="lazy" />
+                <div class="dest-overlay"></div>
+                <div class="dest-content">
+                    <span class="dest-name">Bali</span>
+                    <span class="dest-label">2 Properties</span>
+                </div>
+            </button>
+
+            <button class="dest-card" data-city="tokyo" aria-label="Search Tokyo">
+                <img src="https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=800&q=80" alt="Tokyo" loading="lazy" />
+                <div class="dest-overlay"></div>
+                <div class="dest-content">
+                    <span class="dest-name">Tokyo</span>
+                    <span class="dest-label">2 Properties</span>
+                </div>
+            </button>
+
+            <button class="dest-card" data-city="dubai" aria-label="Search Dubai">
+                <img src="https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=800&q=80" alt="Dubai" loading="lazy" />
+                <div class="dest-overlay"></div>
+                <div class="dest-content">
+                    <span class="dest-name">Dubai</span>
+                    <span class="dest-label">3 Properties</span>
+                </div>
+            </button>
+
+        </div>
+    </div>
+</section>
+
+<!-- ── Loading ───────────────────────────────────────────────────────── -->
+<div id="loadingContainer" class="loading-spinner" role="status" style="display: none;">
+    <div class="spinner"></div>
+    <p>Curating your selection</p>
+</div>
+
+<!-- ── Results ───────────────────────────────────────────────────────── -->
+<section class="results-section" id="resultsSection">
+    <div class="page">
+        <div id="resultsHeader" style="display: none;">
+            <div class="results-header-row">
+                <h2>Hotels in <span id="cityName"></span></h2>
+                <p id="hotelCount" class="result-count"></p>
+            </div>
+        </div>
+        <div id="hotelsContainer" class="hotels-grid"></div>
+    </div>
+</section>
+
+{% endblock %}

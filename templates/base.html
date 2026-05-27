@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Maison — Luxury Hotel Finder{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+    <header class="navbar" id="navbar">
+        <div class="navbar-brand">
+            <a href="/">Maison</a>
+        </div>
+        <nav class="navbar-nav">
+            <a href="/" class="nav-link active">Hotels</a>
+            <a href="#" class="nav-link">Experiences</a>
+            <a href="#" class="nav-link">About</a>
+        </nav>
+    </header>
+
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-grid">
+                <div>
+                    <div class="footer-brand">Maison</div>
+                    <p class="footer-tagline">Curating the world's most exceptional hotels for discerning travellers since 2024.</p>
+                </div>
+                <div>
+                    <div class="footer-col-title">Destinations</div>
+                    <ul class="footer-links">
+                        <li><a href="#">Europe</a></li>
+                        <li><a href="#">Asia Pacific</a></li>
+                        <li><a href="#">Middle East</a></li>
+                        <li><a href="#">The Americas</a></li>
+                        <li><a href="#">Africa</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <div class="footer-col-title">Discover</div>
+                    <ul class="footer-links">
+                        <li><a href="#">Ultra-Luxury</a></li>
+                        <li><a href="#">Urban Retreats</a></li>
+                        <li><a href="#">Remote Escapes</a></li>
+                        <li><a href="#">Private Islands</a></li>
+                        <li><a href="#">New Openings</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <div class="footer-col-title">Company</div>
+                    <ul class="footer-links">
+                        <li><a href="#">About</a></li>
+                        <li><a href="#">Privacy</a></li>
+                        <li><a href="#">Terms</a></li>
+                        <li><a href="#">Contact</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <span class="footer-copy">&copy; 2026 Maison. All rights reserved.</span>
+                <span class="footer-api">Powered by Amadeus Hotel API</span>
+            </div>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
