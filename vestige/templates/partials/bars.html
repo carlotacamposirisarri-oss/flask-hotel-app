@@ -1,0 +1,9 @@
+{% macro bars(pairs, max_items=8, suffix='') %}
+{% set top = pairs[:max_items] %}
+{% set peak = (top|map(attribute=1)|max) if top else 1 %}
+<div class="bars">
+  {% for k, v in top %}
+  <div class="bar"><span class="k">{{ k }}</span><span class="track"><i style="width: {{ (100 * v / (peak or 1))|round }}%"></i></span><span class="v">{{ v }}{{ suffix }}</span></div>
+  {% else %}<p class="empty">No data yet.</p>{% endfor %}
+</div>
+{% endmacro %}

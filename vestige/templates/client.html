@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}{{ c.name }} · {{ brand.name }}{% endblock %}
+{% block content %}
+<header class="hero small client-hero">
+  <div class="avatar xl">{{ c.name|initials }}</div>
+  <div>
+    <p class="eyebrow">{{ brand.name }} · {{ c.tier }} · {{ c.source }}</p>
+    <h1>{{ c.name }}</h1>
+    <p class="lede">{{ c.archetype or 'Archetype to define' }} — {{ c.city }}{{ ', ' if c.city and c.country }}{{ c.country }}</p>
+    <div class="row">
+      <a class="btn ghost" href="{{ url_for('v.client_form', brand_id=brand.id, client_id=c.id) }}">Edit portrait</a>
+      <form method="post" action="{{ url_for('v.client_ai', brand_id=brand.id, client_id=c.id) }}" data-loading><button class="btn">✦ Find gaps & next best action</button></form>
+    </div>
+  </div>
+</header>
+<section class="tiles">
+  <div class="tile"><b>{{ c.engagement_score }}</b><span>Engagement</span></div>
+  <div class="tile"><b>{{ c.phase }}</b><span>Relationship phase</span></div>
+  <div class="tile"><b>{{ c.lifetime_value|money }}</b><span>Lifetime value</span></div>
+  <div class="tile"><b>{{ c.interests|length }}</b><span>Interest clusters</span></div>
+</section>
+<div class="grid2">
+  <section class="panel">
+    <h3>Interest map</h3>
+    <p class="hint">Passions, social circle, cross-sector purchases — and clients who share them.</p>
+    <div id="graph" class="graph" data-graph='{{ graph|tojson }}'></div>
+    <div class="legend"><span class="lg client">Client</span><span class="lg interest">Passion</span><span class="lg circle">Social circle</span><span class="lg purchase">Purchase</span><span class="lg peer">Kindred client</span></div>
+  </section>
+  <section class="panel codes">
+    <h3>360° portrait</h3>
+    <dl>
+      <dt>Affinities</dt><dd><div class="bars">{% for k, v in c.affinities|dictsort(by='value', reverse=true) %}<div class="bar"><span class="k">{{ k }}</span><span class="track"><i style="width: {{ v }}%"></i></span><span class="v">{{ v }}</span></div>{% endfor %}</div></dd>
+      <dt>Social footprint</dt><dd>{{ c.social_footprint or '—' }}</dd>
+      <dt>Cross-sector purchases</dt><dd>{{ c.cross_purchases or '—' }}</dd>
+      <dt>Behavioural signals</dt><dd>{{ c.behavioral_signals or '—' }}</dd>
+      <dt>Social circle</dt><dd>{{ c.social_circle|join(', ') or '—' }}</dd>
+      <dt>Information gaps</dt><dd class="pre">{{ c.info_gaps or '—' }}</dd>
+      <dt>Advisor notes</dt><dd class="pre">{{ c.notes or '—' }}</dd>
+    </dl>
+    {% if peers %}<h3>Kindred clients</h3><ul class="list">{% for p, shared in peers %}<li><a href="{{ url_for('v.client', brand_id=brand.id, client_id=p.id) }}">{{ p.name }}</a> <small>{{ shared|join(', ') }}</small></li>{% endfor %}</ul>{% endif %}
+  </section>
+</div>
+<section class="block">
+  <div class="block-h"><h2>Relationship timeline</h2></div>
+  <form method="post" action="{{ url_for('v.client_event', brand_id=brand.id, client_id=c.id) }}" class="inline-form">
+    <input type="date" name="date">
+    <select name="kind">{% for k in ['Note','Purchase','Visit','Event','Gift','Message','Service'] %}<option>{{ k }}</option>{% endfor %}</select>
+    <input name="description" placeholder="What happened" required>
+    <button class="btn ghost">Add</button>
+  </form>
+  <ol class="timeline">
+    {% for e in events %}<li><time>{{ e.date }}</time><b>{{ e.kind }}</b><p>{{ e.description }}</p></li>{% else %}<li class="empty">No moments recorded yet.</li>{% endfor %}
+  </ol>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='d3.min.js') }}"></script>
+<script>Vestige.graph(document.getElementById('graph'));</script>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="hero small"><p class="eyebrow">Brand engagement</p>
+<h1>{{ 'Refine ' ~ brand.name if brand.id else 'A new maison' }}</h1>
+<p class="lede">Everything the AI generates for this engagement is filtered through these codes. The richer they are, the less generic the output.</p></header>
+<form method="post" class="panel form">
+  <div class="cols">
+    <label>Maison name<input name="name" value="{{ brand.name or '' }}" required></label>
+    <label>Sector<input name="sector" value="{{ brand.sector or '' }}" placeholder="Haute horlogerie, joaillerie, hospitality…" list="sectors"></label>
+    <datalist id="sectors">{% for s in ['Haute horlogerie','Haute joaillerie','Fashion & leather goods','Luxury hospitality','Wine & spirits','Automotive','Yachting','Private aviation','Beauty & fragrance','Real estate'] %}<option>{{ s }}</option>{% endfor %}</datalist>
+  </div>
+  <div class="cols">
+    <label>Key markets<input name="market" value="{{ brand.market or '' }}" placeholder="Europe, GCC, Greater China…"></label>
+    <label>Signature colour<input type="color" name="accent_color" value="{{ brand.accent_color or '#8C6A4A' }}"></label>
+  </div>
+  <label>Heritage narrative<textarea name="heritage" rows="4" placeholder="Founding story, savoir-faire, defining moments">{{ brand.heritage or '' }}</textarea></label>
+  <label>Core values<textarea name="core_values" rows="2">{{ brand.core_values or '' }}</textarea></label>
+  <div class="cols">
+    <label>Visual codes<textarea name="visual_codes" rows="3" placeholder="Signature colours, motifs, iconography, materials">{{ brand.visual_codes or '' }}</textarea></label>
+    <label>Tone of voice<textarea name="tone_of_voice" rows="3" placeholder="How the maison speaks — and never speaks">{{ brand.tone_of_voice or '' }}</textarea></label>
+  </div>
+  <label>Client archetypes <small>(one per line — "Name: description")</small><textarea name="archetypes" rows="5" placeholder="{{ default_archetypes|join('\n') if default_archetypes }}">{{ brand.archetypes or '' }}</textarea></label>
+  <label>Market positioning<textarea name="positioning" rows="2">{{ brand.positioning or '' }}</textarea></label>
+  <label>Known strategic gaps<textarea name="strategic_gaps" rows="3" placeholder="What the maison already knows isn't working">{{ brand.strategic_gaps or '' }}</textarea></label>
+  <fieldset id="strategy">
+    <legend>Current engagement & retention strategy</legend>
+    <p class="hint">What the maison does today to engage and retain VICs. The diagnostic cross-examines this against the archetypes and the competitors.</p>
+    <label>Current strategy<textarea name="current_strategy" rows="6" placeholder="Clienteling programme, events calendar, gifting, CRM cadence, loyalty tiers, after-sales, digital, partnerships, KPIs tracked…">{{ brand.current_strategy or '' }}</textarea></label>
+    <label>Resource allocation <small>(one line per item — "Item: % of budget")</small><textarea name="resource_allocation" rows="5" placeholder="Launch events: 35%&#10;Gifting: 15%&#10;Fashion-week presence: 20%&#10;Clienteling tools: 10%&#10;Private dinners: 20%">{{ brand.resource_allocation or '' }}</textarea></label>
+  </fieldset>
+  <div class="row"><button class="btn">Save engagement</button>
+  {% if brand.id %}<a class="btn ghost" href="{{ url_for('v.brand', brand_id=brand.id) }}">Cancel</a>{% endif %}</div>
+</form>
+{% if brand.id %}
+<form method="post" action="{{ url_for('v.brand_delete', brand_id=brand.id) }}" class="danger-zone" onsubmit="return confirm('Delete this engagement and ALL its clients, work and analyses? This cannot be undone.')">
+  <button class="link danger">Delete engagement</button>
+</form>
+{% endif %}
+{% endblock %}

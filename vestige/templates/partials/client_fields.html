@@ -1,0 +1,35 @@
+<div class="cols">
+  <label>Name<input name="name" value="{{ client.name or '' }}" required></label>
+  <label>Email<input name="email" value="{{ client.email or '' }}"></label>
+</div>
+<div class="cols3">
+  <label>Country<input name="country" value="{{ client.country or '' }}"></label>
+  <label>City<input name="city" value="{{ client.city or '' }}"></label>
+  <label>Tier<input name="tier" value="{{ client.tier or '' }}" placeholder="Platinum, VVIC, Top 100…"></label>
+</div>
+<div class="cols3">
+  <label>Archetype<input name="archetype" value="{{ client.archetype or '' }}" list="archetypes"></label>
+  <datalist id="archetypes">{% for a in archetypes %}<option>{{ a }}</option>{% endfor %}</datalist>
+  <label>Relationship phase<select name="phase">{% for p in phases %}<option {{ 'selected' if client.phase == p }}>{{ p }}</option>{% endfor %}</select></label>
+  <label>Lifetime value (€)<input name="lifetime_value" type="number" step="1000" value="{{ (client.lifetime_value or 0)|int }}"></label>
+</div>
+<label>Engagement score <output>{{ client.engagement_score or 50 }}</output><input type="range" name="engagement_score" min="0" max="100" value="{{ client.engagement_score or 50 }}" oninput="this.previousElementSibling.value=this.value"></label>
+<fieldset class="clusters">
+  <legend>Interest clusters & affinity</legend>
+  {% for c in clusters %}
+  {% set on = c in (client.interests or []) %}
+  <div class="cluster {{ 'on' if on }}">
+    <label class="check"><input type="checkbox" name="interests" value="{{ c }}" {{ 'checked' if on }} onchange="this.closest('.cluster').classList.toggle('on', this.checked)"> {{ c }}</label>
+    <input type="range" name="aff_{{ c }}" min="0" max="100" value="{{ (client.affinities or {}).get(c, 60) }}" title="Affinity">
+  </div>
+  {% endfor %}
+  {% for c in (client.interests or []) if c not in clusters %}
+  <div class="cluster on"><label class="check"><input type="checkbox" name="interests" value="{{ c }}" checked> {{ c }}</label><input type="range" name="aff_{{ c }}" min="0" max="100" value="{{ (client.affinities or {}).get(c, 60) }}"></div>
+  {% endfor %}
+</fieldset>
+<label>Social circle <small>(people, clubs, institutions — comma separated)</small><input name="social_circle" value="{{ (client.social_circle or [])|join(', ') }}"></label>
+<label>Social footprint<textarea name="social_footprint" rows="2">{{ client.social_footprint or '' }}</textarea></label>
+<label>Known cross-sector purchases <small>(comma separated)</small><textarea name="cross_purchases" rows="2">{{ client.cross_purchases or '' }}</textarea></label>
+<label>Behavioural signals<textarea name="behavioral_signals" rows="2">{{ client.behavioral_signals or '' }}</textarea></label>
+<label>Information gaps<textarea name="info_gaps" rows="3">{{ client.info_gaps or '' }}</textarea></label>
+<label>Advisor notes<textarea name="notes" rows="3">{{ client.notes or '' }}</textarea></label>

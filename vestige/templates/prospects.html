@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Prospecting · Vestige{% endblock %}
+{% block content %}
+<header class="hero">
+  <p class="eyebrow">Vestige · Proactive mode</p>
+  <h1>Find the maisons that need you — before they know it.</h1>
+  <p class="lede">The radar scans public signals for companies with the problem Vestige solves. Each lead gets a researched dossier with sources, an honest fit score, a pitch built on their own evidence, an opportunity report, a pitch deck and outreach drafts. When a lead is won, it becomes a client engagement in one click.</p>
+</header>
+
+<div class="grid2">
+  <section class="panel">
+    <h3>Lead radar</h3>
+    <form method="post" class="form" data-loading>
+      <input type="hidden" name="action" value="radar">
+      <label>What are you looking for?<textarea name="thesis" rows="4" required placeholder="e.g. Independent haute horlogerie and joaillerie houses opening boutiques in the GCC in 2025-26, whose communication is launch-driven and who talk about 'clienteling' or 'next generation' clients."></textarea></label>
+      <div class="row"><label>How many<input type="number" name="n" value="8" min="3" max="15" style="width:90px"></label>
+        <select name="provider"><option value="">{{ ai_status.label }} (default)</option><option value="claude" {{ 'disabled' if not ai_status.claude }}>Claude (with web)</option><option value="astra" {{ 'disabled' if not ai_status.astra }}>Chat Astra (no web)</option></select>
+        <button class="btn" {{ 'disabled' if not ai_status.active }}>✦ Scan the market</button></div>
+      <p class="hint">Uses live web search through Claude. Takes one to three minutes.</p>
+    </form>
+  </section>
+  <section class="panel">
+    <h3>Add a company you already have in mind</h3>
+    <form method="post" class="form" data-loading>
+      <div class="cols"><label>Company<input name="company" required></label><label>Website<input name="website" placeholder="https://"></label></div>
+      <div class="cols"><label>Sector<input name="sector"></label><label>Market<input name="market"></label></div>
+      <label>Why it caught your eye<input name="why"></label>
+      <label>Material you gathered <small>(paste posts, comments, report excerpts, notes)</small><textarea name="material" rows="3"></textarea></label>
+      <div class="row"><label class="check"><input type="checkbox" name="research" checked> Research it now</label><button class="btn">Add lead</button></div>
+    </form>
+  </section>
+</div>
+
+<section class="block">
+  <div class="block-h"><h2>Pipeline</h2><span class="count">{{ total }}</span></div>
+  <div class="board">
+    {% for s in stages %}
+    <div class="col"><h4>{{ s }} <small>{{ board[s]|length }}</small></h4>
+      {% for p in board[s] %}
+      <a class="lead" href="{{ url_for('v.prospect', pid=p.id) }}">
+        <b>{{ p.company }}</b>
+        <small>{{ p.sector }}{{ ' · ' if p.sector and p.market }}{{ p.market }}</small>
+        {% if p.fit_score is not none %}<span class="fit"><span class="meter"><i style="width: {{ p.fit_score }}%"></i></span> fit {{ p.fit_score }}</span>{% endif %}
+        {% if p.run_status in ('queued', 'running') %}<em>researching…</em>{% elif p.why %}<em>{{ p.why|truncate(90) }}</em>{% endif %}
+      </a>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

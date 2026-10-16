@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Diagnostic · {{ brand.name }}{% endblock %}
+{% block content %}
+<header class="hero">
+  <p class="eyebrow">{{ brand.name }} · Engagement Diagnostic</p>
+  <h1>From CRM data to an experiential strategy.</h1>
+  <p class="lede">One run reads the whole client base. It detects behavioural archetypes, cross-examines them against the maison's identity, its current engagement and retention strategy, and its competitors' actions. It then recommends where to redirect resources, and delivers an analytical report and a deck.</p>
+</header>
+
+<div class="pipeline">
+  {% for n, t, dsc in [('01','Segment','Clusters clients on interests, cross-industry & historic purchases, value, frequency, recency'),('02','Archetypes','Names each segment through the maison\'s lens — every trait tied to a number'),('03','Cross-examine','Archetypes × brand identity × current strategy × competitor actions'),('04','Strategy','Resource reallocation + experiential plays for emotion and revenue'),('05','Deliver','Analytical report (PDF) and presentation deck (PDF / PowerPoint)')] %}
+  <div class="step"><b>{{ n }}</b><h4>{{ t }}</h4><p>{{ dsc }}</p></div>
+  {% endfor %}
+</div>
+
+<div class="grid2">
+  <section class="panel">
+    <h3>Data readiness</h3>
+    <p class="hint">The richer the inputs, the sharper the diagnosis. Missing items are flagged inside the report, not invented.</p>
+    <ul class="ready">
+      {% for label, ok, note in ready %}<li class="{{ 'ok' if ok else 'miss' }}"><i>{{ '✓' if ok else '—' }}</i><b>{{ label }}</b><small>{{ note }}</small></li>{% endfor %}
+    </ul>
+    <div class="row">
+      <a class="link" href="{{ url_for('v.crm_import', brand_id=brand.id) }}">Import CRM / transactions</a>
+      <a class="link" href="{{ url_for('v.brand_form', brand_id=brand.id) }}#strategy">Describe current strategy</a>
+      <a class="link" href="{{ url_for('v.competitors', brand_id=brand.id) }}">Document competitor actions</a>
+    </div>
+  </section>
+  <section class="panel">
+    <h3>Run a diagnostic</h3>
+    <form method="post" class="form">
+      <label>Brief <small>(optional — the engagement's question, constraints, budget)</small>
+        <textarea name="brief" rows="4" placeholder="e.g. The CEO wants to know why the Gulf VICs are drifting and where to move the 2027 events budget."></textarea></label>
+      <div class="row">
+        <select name="provider"><option value="">{{ ai_status.label }} (default)</option><option value="claude" {{ 'disabled' if not ai_status.claude }}>Claude</option><option value="astra" {{ 'disabled' if not ai_status.astra }}>Chat Astra</option></select>
+        <button class="btn" {{ 'disabled' if not ai_status.active }}>✦ Run full diagnostic</button>
+      </div>
+      {% if not ai_status.active %}<p class="hint">Connect Claude in <a href="{{ url_for('v.settings') }}">Settings</a> first.</p>{% endif %}
+      <p class="hint">Takes a few minutes. You can leave the page — it runs in the background.</p>
+    </form>
+  </section>
+</div>
+
+<section class="block"><div class="block-h"><h2>Diagnostics</h2></div>
+<table class="table"><thead><tr><th>#</th><th>Started</th><th>Status</th><th>Model</th><th></th></tr></thead><tbody>
+{% for r in runs %}<tr><td>{{ r.id }}</td><td>{{ r.created_at[:16]|replace('T', ' ') }}</td>
+<td><span class="chip {{ 'st' if r.status == 'done' else ('sev-high' if r.status == 'error' else '') }}">{{ r.status }}</span> {% if r.status == 'error' %}<small>{{ r.error|truncate(80) }}</small>{% endif %}</td>
+<td><small>{{ r.model }}</small></td>
+<td class="nowrap"><a class="link" href="{{ url_for('v.diagnostic_view', brand_id=brand.id, diag_id=r.id) }}">Open</a>
+{% if r.deck_id %} · <a class="link" href="{{ url_for('v.deck_edit', deck_id=r.deck_id) }}">Deck</a>{% endif %}</td></tr>
+{% else %}<tr><td colspan="5" class="empty">No diagnostic yet.</td></tr>{% endfor %}
+</tbody></table></section>
+{% endblock %}

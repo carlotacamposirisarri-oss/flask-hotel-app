@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% from "partials/items.html" import card with context %}
+{% from "partials/bars.html" import bars %}
+{% block title %}{{ brand.name }} · Vestige{% endblock %}
+{% block content %}
+<header class="hero">
+  <p class="eyebrow">{{ brand.sector }} · {{ brand.market }}</p>
+  <h1>{{ brand.name }}</h1>
+  <p class="lede">{{ brand.positioning }}</p>
+  <div class="row">
+    <a class="btn" href="{{ url_for('v.diagnostics', brand_id=brand.id) }}">✦ Engagement diagnostic</a>
+    <a class="btn ghost" href="{{ url_for('v.brand_form', brand_id=brand.id) }}">Edit maison codes</a>
+    <a class="btn ghost" href="{{ url_for('v.deck_new', source='b:' ~ brand.id) }}">Build a deliverable</a>
+  </div>
+</header>
+
+<section class="tiles">
+  <div class="tile"><b>{{ stats.count }}</b><span>Clients</span></div>
+  <div class="tile"><b>{{ stats.avg_engagement }}</b><span>Avg engagement</span></div>
+  <div class="tile"><b>{{ stats.loyal }}</b><span>Loyal & ambassadors</span></div>
+  <div class="tile warn"><b>{{ stats.at_risk }}</b><span>At risk / dormant</span></div>
+  <div class="tile"><b>{{ stats.total_ltv|money }}</b><span>Portfolio lifetime value</span></div>
+</section>
+
+<div class="grid3">
+  <section class="panel"><h3>Archetypes</h3>{{ bars(stats.archetypes) }}</section>
+  <section class="panel"><h3>Interest clusters</h3>{{ bars(stats.interests) }}</section>
+  <section class="panel"><h3>Relationship phases</h3>{{ bars(stats.phases) }}</section>
+</div>
+
+<section class="block">
+  <div class="block-h"><h2>The engagement</h2></div>
+  <div class="modules">
+    {% set mods = [
+      ('clients', 'Client intelligence', stats.count ~ ' portraits', 'Behavioural portraits, interest maps, CRM sync'),
+      ('competitors', 'Competitive mapping', counts.competitive ~ ' reads', 'Cross-examination across shared client tiers'),
+      ('insights', 'Insight feed', counts.insight ~ ' insights', 'Proactive signals and a prospecting analyst'),
+      ('studio', 'Story & community', (counts.story + counts.community) ~ ' drafts', 'Narratives and community blueprints'),
+      ('retention', 'Retention & experiences', counts.initiative ~ ' initiatives', 'Archetype plays and the 12-month roadmap'),
+      ('collaborations', 'Collaborations', counts.collaboration ~ ' partners', 'Cross-industry pipeline with brand-fit check'),
+      ('emotion', 'Emotion & audit', (counts.cx_map + counts.audit) ~ ' items', 'CX map, event design, strategy audit'),
+    ] %}
+    {% for slug, name, n, desc in mods %}
+    <a class="module" href="/b/{{ brand.id }}/{{ slug }}"><span class="eyebrow">{{ n }}</span><h3>{{ name }}</h3><p>{{ desc }}</p></a>
+    {% endfor %}
+  </div>
+</section>
+
+<div class="grid2">
+  <section class="panel codes">
+    <h3>Maison codes</h3>
+    <dl>
+      <dt>Heritage</dt><dd>{{ brand.heritage }}</dd>
+      <dt>Values</dt><dd>{{ brand.core_values }}</dd>
+      <dt>Visual codes</dt><dd>{{ brand.visual_codes }}</dd>
+      <dt>Tone</dt><dd>{{ brand.tone_of_voice }}</dd>
+      <dt>Known gaps</dt><dd>{{ brand.strategic_gaps }}</dd>
+    </dl>
+  </section>
+  <section>
+    <div class="block-h"><h2>Latest insights</h2><a class="link" href="/b/{{ brand.id }}/insights">All →</a></div>
+    <div class="items">{% for it in insights %}{{ card(it) }}{% else %}<p class="empty">Generate the first insight feed from the Insights page.</p>{% endfor %}</div>
+    {% if decks %}<h3>Deliverables</h3><ul class="list">{% for d in decks %}<li><a href="{{ url_for('v.deck_edit', deck_id=d.id) }}">{{ d.title }}</a> <small>{{ d.updated_at[:10] }}</small></li>{% endfor %}</ul>{% endif %}
+  </section>
+</div>
+{% endblock %}

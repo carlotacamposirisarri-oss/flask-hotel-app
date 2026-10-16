@@ -1,0 +1,111 @@
+{# Shared by the in-app diagnostic view and the standalone printable report. #}
+{% set seg = d.segmentation %}{% set cx = d.crossexam %}{% set st = d.strategy %}
+{% set A = {} %}{% for a in (d.archetypes.archetypes or []) %}{% set _ = A.update({a.segment_id: a}) %}{% endfor %}
+{% macro aname(sid) %}{{ A[sid].name if sid in A else 'Segment ' ~ (sid + 1) }}{% endmacro %}
+{% set q = seg.quality %}
+
+{% if st.executive_summary %}
+<section class="rsec">
+  <p class="eyebrow">01 · Executive summary</p>
+  <h2>{{ st.headline }}</h2>
+  <ol class="exec">{% for m in st.executive_summary %}<li>{{ m }}</li>{% endfor %}</ol>
+</section>
+{% endif %}
+
+<section class="rsec">
+  <p class="eyebrow">02 · Data & method</p>
+  <h2>{{ q.clients }} clients, {{ q.k }} behavioural archetypes</h2>
+  <p class="lede">Clients were clustered on interest clusters ({{ q.features.interest_clusters }}), cross-industry purchase categories ({{ q.features.cross_industry }}), own-brand categories ({{ q.features.own_categories }}), lifetime value, purchase frequency, recency and engagement. Segment separation (silhouette): <b>{{ q.silhouette }}</b> — {{ 'clear structure' if q.silhouette >= 0.35 else ('moderate structure' if q.silhouette >= 0.2 else 'weak structure: read archetypes as tendencies') }}.</p>
+  <div class="coverage">
+    {% for k, v in q.data_coverage.items() %}<div><span>{{ k|label }}</span><span class="meter {{ 'warn' if v < 50 }}"><i style="width: {{ v }}%"></i></span><b>{{ v }}%</b></div>{% endfor %}
+  </div>
+  {% if d.archetypes.segmentation_reading %}<p class="note"><b>Reading</b> {{ d.archetypes.segmentation_reading }}</p>{% endif %}
+</section>
+
+<section class="rsec">
+  <p class="eyebrow">03 · Archetypes</p>
+  <h2>Who the clients really are</h2>
+  <table class="table arch-table"><thead><tr><th>Archetype</th><th>Clients</th><th>Value</th><th>Avg LTV</th><th>Purchases</th><th>Days since last</th><th>Engagement</th><th>At risk</th></tr></thead><tbody>
+  {% for s in seg.segments %}<tr><td><b>{{ aname(s.id) }}</b></td>
+    <td><span class="meter"><i style="width: {{ s.size_pct }}%"></i></span> {{ s.size_pct }}%</td>
+    <td><span class="meter"><i style="width: {{ s.value_pct }}%"></i></span> {{ s.value_pct }}%</td>
+    <td>{{ s.avg_ltv|money }}</td><td>{{ s.avg_purchases }}</td><td>{{ s.avg_recency_days }}</td><td>{{ s.avg_engagement }}</td>
+    <td><span class="meter warn"><i style="width: {{ s.at_risk_pct }}%"></i></span> {{ s.at_risk_pct }}%</td></tr>{% endfor %}
+  </tbody></table>
+  <div class="arch-grid">
+  {% for s in seg.segments %}{% set a = A.get(s.id, {}) %}
+    <article class="arch">
+      <p class="eyebrow">{{ s.size }} clients · {{ s.value_pct }}% of value</p>
+      <h3>{{ aname(s.id) }}</h3>
+      {% if a.essence %}<p class="essence">{{ a.essence }}</p>{% endif %}
+      <div class="arch-cols">
+        <div><h5>Passions (share · lift)</h5>
+          <div class="bars">{% for r in s.interests[:5] %}<div class="bar"><span class="k">{{ r.label }}</span><span class="track"><i style="width: {{ r.share }}%"></i></span><span class="v">{{ r.share }}% · ×{{ r.lift }}</span></div>{% endfor %}</div></div>
+        <div><h5>Cross-industry purchases</h5>
+          <div class="bars">{% for r in s.cross_industry[:5] %}<div class="bar"><span class="k">{{ r.label }}</span><span class="track"><i style="width: {{ r.share }}%"></i></span><span class="v">{{ r.share }}% · ×{{ r.lift }}</span></div>{% else %}<p class="empty">No data.</p>{% endfor %}</div>
+          {% if s.own_categories %}<h5>Bought from the maison</h5><p>{{ s.own_categories|map(attribute='label')|join(', ') }}</p>{% endif %}</div>
+      </div>
+      {% if a.defining_behaviours %}<h5>Defining behaviours</h5><ul>{% for x in a.defining_behaviours %}<li>{{ x }}</li>{% endfor %}</ul>{% endif %}
+      {% if a.emotional_drivers %}<p><b>Emotional drivers:</b> {{ a.emotional_drivers|join(' · ') }}</p>{% endif %}
+      {% if a.motivations %}<p><b>Motivations:</b> {{ a.motivations|join(' · ') }}</p>{% endif %}
+      {% if a.relationship_to_brand %}<p><b>Relationship to the maison:</b> {{ a.relationship_to_brand }}</p>{% endif %}
+      {% if a.commercial_role %}<p><b>Commercial role:</b> {{ a.commercial_role }}</p>{% endif %}
+      {% if a.risk_signals %}<p><b>Risk signals:</b> {{ a.risk_signals|join(' · ') }}</p>{% endif %}
+      {% if a.data_caveats %}<p class="muted"><i>Data caveat: {{ a.data_caveats }}</i></p>{% endif %}
+    </article>
+  {% endfor %}
+  </div>
+</section>
+
+{% if cx.matrix %}
+<section class="rsec">
+  <p class="eyebrow">04 · Cross-examination</p>
+  <h2>Identity × current strategy × competitors</h2>
+  <p class="lede">{{ cx.synthesis }}</p>
+  <table class="heat"><thead><tr><th>Archetype</th><th>Identity fit</th><th>Strategy coverage</th><th>Competitor pressure</th><th>Main rival</th><th>Reading</th></tr></thead><tbody>
+  {% for m in cx.matrix %}<tr><th>{{ m.archetype }}</th>
+    {% for v in [m.identity_fit, m.strategy_coverage, m.competitor_pressure] %}<td class="h" style="--h: {{ (v or 0)|float / 100 }}"><span>{{ v }}</span></td>{% endfor %}
+    <td>{{ m.main_competitor }}</td><td class="small">{{ m.reading }}</td></tr>{% endfor %}
+  </tbody></table>
+  <div class="grid2 rgrid">
+    <div><h3>Weaknesses</h3>
+      {% for w in cx.weaknesses %}<div class="finding"><span class="chip sev-{{ w.severity|lower }}">{{ w.severity }}</span><h4>{{ w.title }}</h4><p>{{ w.evidence }}</p><p class="muted">Affects: {{ w.archetypes|join(', ') }} · Cost of inaction: {{ w.cost_of_inaction }}</p></div>{% endfor %}</div>
+    <div><h3>Opportunities</h3>
+      {% for o in cx.opportunities %}<div class="finding opp"><span class="chip st">{{ o.value_at_stake }}</span><h4>{{ o.title }}</h4><p>{{ o.evidence }}</p><p class="muted">For: {{ o.archetypes|join(', ') }} · Why we win: {{ o.why_we_win }}</p></div>{% endfor %}</div>
+  </div>
+  {% if cx.competitor_reads %}<h3>Competitors</h3>
+  <table class="table"><thead><tr><th>Competitor</th><th>What they do well</th><th>Where they are weak</th><th>Archetypes targeted</th></tr></thead><tbody>
+  {% for c in cx.competitor_reads %}<tr><td><b>{{ c.competitor }}</b></td><td>{{ c.what_they_do_well }}</td><td>{{ c.where_they_are_weak }}</td><td>{{ c.archetypes_targeted|join(', ') }}</td></tr>{% endfor %}
+  </tbody></table>{% endif %}
+</section>
+{% endif %}
+
+{% if st.archetype_plays %}
+<section class="rsec">
+  <p class="eyebrow">05 · Recommendation</p>
+  <h2>{{ st.north_star.concept }}</h2>
+  <p class="lede">{{ st.north_star.why_it_is_ownable }}</p>
+  <div class="grid2 rgrid">
+    <div><h3>Redirect resources</h3>
+      {% for r in st.reallocation %}<div class="realloc"><span class="from">{{ r['from'] }}</span><span class="arrow">→ {{ r.shift_pct }}% →</span><span class="to">{{ r.to }}</span><p class="muted">{{ r.rationale }}</p></div>{% endfor %}</div>
+    <div><h3>Target allocation</h3>
+      <div class="bars">{% for t in st.target_allocation %}<div class="bar"><span class="k">{{ t.line }}</span><span class="track"><i style="width: {{ t.pct }}%"></i></span><span class="v">{{ t.pct }}%</span></div>{% endfor %}</div></div>
+  </div>
+  <h3>Experiential plays by archetype</h3>
+  {% for p in st.archetype_plays %}
+  <article class="play">
+    <p class="eyebrow">{{ p.archetype }}</p><h4>{{ p.experiential_pillar }}</h4><p>{{ p.objective }} <span class="muted">· Cadence: {{ p.cadence }}</span></p>
+    <table class="table"><thead><tr><th>Experience</th><th>Format</th><th>Emotional impact</th><th>Commercial KPI</th><th>Expected result</th></tr></thead><tbody>
+    {% for e in p.signature_experiences %}<tr><td><b>{{ e.name }}</b><br><small>{{ e.description }}</small></td><td>{{ e.format }}</td><td class="impact">{% for n in range((e.emotional_impact or 0)|int) %}●{% endfor %}</td><td>{{ e.commercial_kpi }}</td><td>{{ e.expected_result }}</td></tr>{% endfor %}
+    </tbody></table>
+  </article>
+  {% endfor %}
+  <h3>Twelve-month roadmap</h3>
+  <div class="quarters">{% for r in st.roadmap %}<div><h4>{{ r.quarter }}</h4><ul>{% for i in r.initiatives %}<li>{{ i }}</li>{% endfor %}</ul></div>{% endfor %}</div>
+  <div class="grid2 rgrid">
+    <div><h3>KPIs</h3><p><b>Emotional</b></p><ul>{% for k in st.kpis.emotional %}<li>{{ k }}</li>{% endfor %}</ul><p><b>Commercial</b></p><ul>{% for k in st.kpis.commercial %}<li>{{ k }}</li>{% endfor %}</ul></div>
+    <div><h3>First 90 days</h3><ol>{% for k in st.quick_wins %}<li>{{ k }}</li>{% endfor %}</ol>
+      {% if st.assumptions %}<h3>Assumptions</h3><ul class="muted">{% for k in st.assumptions %}<li>{{ k }}</li>{% endfor %}</ul>{% endif %}</div>
+  </div>
+</section>
+{% endif %}

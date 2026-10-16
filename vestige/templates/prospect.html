@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}{{ p.company }} · Prospecting{% endblock %}
+{% block head %}{% if p.run_status in ('queued', 'running') %}<meta http-equiv="refresh" content="6">{% endif %}{% endblock %}
+{% block content %}
+<header class="hero small">
+  <p class="eyebrow">Prospect · {{ p.sector }}{{ ' · ' if p.market }}{{ p.market }} · {{ p.stage }}</p>
+  <h1>{{ p.company }}</h1>
+  {% if p.website %}<p><a class="link" href="{{ p.website }}" target="_blank" rel="noopener">{{ p.website }}</a></p>{% endif %}
+  {% if p.why %}<p class="lede">{{ p.why }}</p>{% endif %}
+  <div class="row">
+    {% if p.pitch.pitch %}
+    <a class="btn" href="{{ url_for('v.prospect_report', pid=p.id) }}" target="_blank">Opportunity report (PDF)</a>
+    <form method="post"><input type="hidden" name="action" value="deck"><button class="btn ghost">{{ 'Rebuild' if p.deck_id else 'Build' }} pitch deck</button></form>
+    {% if p.deck_id %}<a class="btn ghost" href="{{ url_for('v.deck_view', deck_id=p.deck_id) }}" target="_blank">View deck</a>{% endif %}
+    {% endif %}
+    {% if p.brand_id %}<a class="btn ghost" href="{{ url_for('v.brand', brand_id=p.brand_id) }}">Open engagement →</a>
+    {% elif p.dossier.snapshot %}<form method="post" onsubmit="return confirm('Convert {{ p.company }} into a client engagement?')"><input type="hidden" name="action" value="convert"><button class="btn ghost">Won → create engagement</button></form>{% endif %}
+    {% if p.model %}<span class="stamp">{{ p.model }}{{ ' · web-researched' if p.used_web else ' · no web access' }}</span>{% endif %}
+  </div>
+</header>
+
+{% if p.run_status in ('queued', 'running') %}
+<section class="panel progress"><h3>Researching…</h3>
+  <ol class="stages">{% set ns = namespace(done=true) %}{% for key, label in run_stages %}
+    {% if key == p.run_stage %}{% set ns.done = false %}<li class="now"><span class="orb small"></span>{{ label }}</li>{% elif ns.done %}<li class="done">✓ {{ label }}</li>{% else %}<li>{{ label }}</li>{% endif %}{% endfor %}</ol>
+  <p class="hint">Live web research takes a few minutes. This page refreshes by itself.</p></section>
+{% elif p.run_status == 'error' %}<div class="flash error">{{ p.error }}</div>{% endif %}
+
+<div class="grid2">
+  <section class="panel">
+    <h3>{{ 'Re-run research' if p.dossier.snapshot else 'Research this company' }}</h3>
+    <form method="post" class="form" data-loading>
+      <input type="hidden" name="action" value="research">
+      <label>Material you gathered <small>(posts, comments, report excerpts, notes — the AI also searches the web)</small><textarea name="material" rows="5">{{ p.material }}</textarea></label>
+      <div class="row"><select name="provider"><option value="">{{ ai_status.label }} (default)</option><option value="claude" {{ 'disabled' if not ai_status.claude }}>Claude (with web)</option><option value="astra" {{ 'disabled' if not ai_status.astra }}>Chat Astra (no web)</option></select>
+      <button class="btn" {{ 'disabled' if not ai_status.active or p.run_status in ('queued', 'running') }}>✦ Research & assess</button></div>
+    </form>
+  </section>
+  <section class="panel">
+    <h3>Lead</h3>
+    <form method="post" class="form"><input type="hidden" name="action" value="update">
+      <div class="cols"><label>Company<input name="company" value="{{ p.company }}"></label><label>Stage<select name="stage">{% for s in stages %}<option {{ 'selected' if p.stage == s }}>{{ s }}</option>{% endfor %}</select></label></div>
+      <div class="cols3"><label>Sector<input name="sector" value="{{ p.sector }}"></label><label>Market<input name="market" value="{{ p.market }}"></label><label>Website<input name="website" value="{{ p.website }}"></label></div>
+      <label>Notes<textarea name="notes" rows="3">{{ p.notes }}</textarea></label>
+      <div class="row"><button class="btn ghost">Save</button></div>
+    </form>
+  </section>
+</div>
+
+{% if p.pitch.outreach %}{% set o = p.pitch.outreach %}
+<section class="block"><div class="block-h"><h2>Outreach drafts</h2></div>
+  <div class="grid2">
+    <div class="panel"><h3>Email</h3><p><b>Subject:</b> {{ o.email_subject }}</p><pre class="draft">{{ o.email_body }}</pre><p class="hint">Follow-up: {{ o.follow_up }}</p></div>
+    <div class="panel"><h3>LinkedIn note</h3><pre class="draft">{{ o.linkedin_note }}</pre>
+      <h3>Next steps</h3><ol>{% for n in p.pitch.next_steps or [] %}<li>{{ n }}</li>{% endfor %}</ol></div>
+  </div>
+  <p class="hint">Drafts only — review, personalise and send them yourself.</p>
+</section>
+{% endif %}
+
+{% include "partials/prospect_body.html" %}
+<form method="post" class="danger-zone" onsubmit="return confirm('Delete this lead?')"><input type="hidden" name="action" value="delete"><button class="link danger">Delete lead</button></form>
+{% endblock %}

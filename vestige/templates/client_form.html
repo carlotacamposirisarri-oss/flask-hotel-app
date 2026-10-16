@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="hero small"><p class="eyebrow">{{ brand.name }} · Client</p><h1>{{ client.name or 'New client portrait' }}</h1></header>
+<form method="post" class="panel form">
+  {% include "partials/client_fields.html" %}
+  <div class="row"><button class="btn">Save profile</button><a class="btn ghost" href="{{ url_for('v.clients', brand_id=brand.id) }}">Cancel</a></div>
+</form>
+{% if client.id %}
+<form method="post" action="{{ url_for('v.client_delete', brand_id=brand.id, client_id=client.id) }}" class="danger-zone" onsubmit="return confirm('Remove this client?')"><button class="link danger">Remove client</button></form>
+{% endif %}
+{% endblock %}

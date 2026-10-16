@@ -1,0 +1,29 @@
+# Render Blueprint for Vestige Intelligence.
+# New > Blueprint > select this repository. Render will ask for the values
+# marked `sync: false` (password and API key) — they are never stored in git.
+services:
+  - type: web
+    name: vestige-intelligence
+    runtime: python
+    plan: starter            # a persistent disk requires a paid instance
+    region: frankfurt
+    buildCommand: pip install -r vestige/requirements.txt
+    # One worker: SQLite + in-process login throttle. Threads serve concurrency;
+    # long timeout because deep AI analyses can take minutes.
+    startCommand: gunicorn "vestige:create_app()" --workers 1 --threads 8 --timeout 600 --bind 0.0.0.0:$PORT
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: VESTIGE_INSTANCE
+        value: /var/data
+      - key: VESTIGE_SECRET_KEY
+        generateValue: true
+      - key: VESTIGE_PASSWORD
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+    disk:
+      name: vestige-data
+      mountPath: /var/data
+      sizeGB: 1

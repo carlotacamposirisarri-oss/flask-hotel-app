@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% from "partials/items.html" import block with context %}
+{% block content %}
+<header class="hero small"><p class="eyebrow">{{ brand.name }} · Competitive mapping</p><h1>Who else is courting these clients?</h1>
+<p class="lede">Define the competitive set, position it on a strategic map, then let the AI cross-examine each rival across shared client tiers.</p></header>
+<div class="grid2">
+  <section class="panel">
+    <h3>Strategic map</h3>
+    <svg viewBox="0 0 400 400" class="stratmap" role="img" aria-label="Strategic positioning map">
+      <rect x="20" y="20" width="360" height="360" class="frame"/>
+      <line x1="200" y1="20" x2="200" y2="380" class="axis"/><line x1="20" y1="200" x2="380" y2="200" class="axis"/>
+      {% for c in comps %}
+        {% set x = 20 + 3.6 * c.axis_x %}{% set y = 380 - 3.6 * c.axis_y %}
+        <circle cx="{{ x }}" cy="{{ y }}" r="7" class="rival"/><text x="{{ x + 10 }}" y="{{ y + 4 }}">{{ c.name }}</text>
+      {% endfor %}
+      {% set bx = 20 + 3.6 * brand.map_x %}{% set by = 380 - 3.6 * brand.map_y %}
+      <circle cx="{{ bx }}" cy="{{ by }}" r="10" class="self"/><text x="{{ bx + 13 }}" y="{{ by + 5 }}" class="selft">{{ brand.name }}</text>
+    </svg>
+    <p class="axis-l x">{{ brand.map_x_label }}</p><p class="axis-l y">↑ {{ brand.map_y_label }}</p>
+    <details><summary>Configure axes & our position</summary>
+      <form method="post" class="form"><input type="hidden" name="action" value="axes">
+        <label>Horizontal axis<input name="map_x_label" value="{{ brand.map_x_label }}"></label>
+        <label>Vertical axis<input name="map_y_label" value="{{ brand.map_y_label }}"></label>
+        <div class="cols"><label>Our X<input type="range" name="map_x" min="0" max="100" value="{{ brand.map_x }}"></label><label>Our Y<input type="range" name="map_y" min="0" max="100" value="{{ brand.map_y }}"></label></div>
+        <button class="btn ghost">Update map</button></form>
+    </details>
+  </section>
+  <section class="panel">
+    <h3>{{ 'Edit ' ~ edit.name if edit else 'Add a competitor' }}</h3>
+    <form method="post" class="form">
+      {% if edit %}<input type="hidden" name="id" value="{{ edit.id }}">{% endif %}
+      <label>Name<input name="name" value="{{ edit.name if edit else '' }}" required></label>
+      <label>Positioning<textarea name="positioning" rows="2">{{ edit.positioning if edit }}</textarea></label>
+      <label>Client tiers they serve<input name="client_tiers" value="{{ edit.client_tiers if edit else '' }}"></label>
+      <label>Public signals <small>(boutiques, events, collaborations, digital)</small><textarea name="signals" rows="3">{{ edit.signals if edit }}</textarea></label>
+      <label>Recent actions <small>(events, programmes, collaborations, launches, communities — with dates)</small><textarea name="actions" rows="3">{{ edit.actions if edit }}</textarea></label>
+      <label>Notes<textarea name="notes" rows="2">{{ edit.notes if edit }}</textarea></label>
+      <div class="cols"><label>X position<input type="range" name="axis_x" min="0" max="100" value="{{ edit.axis_x if edit else 50 }}"></label><label>Y position<input type="range" name="axis_y" min="0" max="100" value="{{ edit.axis_y if edit else 50 }}"></label></div>
+      <button class="btn">{{ 'Save' if edit else 'Add competitor' }}</button>
+    </form>
+  </section>
+</div>
+<table class="table">
+  <thead><tr><th>Competitor</th><th>Positioning</th><th>Tiers</th><th>Recent actions</th><th></th></tr></thead>
+  <tbody>{% for c in comps %}<tr><td><b>{{ c.name }}</b></td><td>{{ c.positioning }}</td><td>{{ c.client_tiers }}</td><td>{{ (c.actions or c.signals)|truncate(110) }}</td>
+  <td class="nowrap"><a class="link" href="?edit={{ c.id }}">Edit</a>
+  <form method="post" action="{{ url_for('v.competitor_delete', brand_id=brand.id, comp_id=c.id) }}" style="display:inline" onsubmit="return confirm('Remove?')"><button class="link danger">Remove</button></form></td></tr>
+  {% else %}<tr><td colspan="5" class="empty">No competitors defined yet.</td></tr>{% endfor %}</tbody>
+</table>
+{{ block('competitive', groups.competitive, brand, 'One read per competitor: overlapping affinities, engagement gaps, whitespace, threats. Annotate before presenting.') }}
+{% endblock %}

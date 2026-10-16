@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% from "partials/items.html" import block with context %}
+{% from "partials/bars.html" import bars %}
+{% block content %}
+<header class="hero small"><p class="eyebrow">Vestige · Internal</p><h1>The intelligence layer</h1>
+<p class="lede">Anonymised patterns across every maison and client in the platform — the raw material for benchmarks, market reports and Vestige's own authority.</p></header>
+<section class="tiles">
+  <div class="tile"><b>{{ x.brands }}</b><span>Maisons</span></div>
+  <div class="tile"><b>{{ x.clients }}</b><span>Clients (anonymised)</span></div>
+  <div class="tile"><b>{{ x.interests|length }}</b><span>Interest clusters observed</span></div>
+  <div class="tile"><b>{{ x.formats|length }}</b><span>Experiential formats</span></div>
+</section>
+<div class="grid3">
+  <section class="panel"><h3>Interest clusters</h3>{{ bars(x.interests, 10) }}</section>
+  <section class="panel"><h3>Lifecycle phases</h3>{{ bars(x.phases) }}</section>
+  <section class="panel"><h3>Client geography</h3>{{ bars(x.countries) }}</section>
+</div>
+<section class="block"><div class="block-h"><div><h2>Archetype library</h2><p class="lede">The archetypes found by each maison's latest diagnostic, side by side. This is the raw material for a proprietary Vestige archetype framework.</p></div></div>
+<table class="table"><thead><tr><th>Maison</th><th>Archetype</th><th>Essence</th><th>Clients</th><th>Value</th><th>At risk</th><th>Top passions</th></tr></thead><tbody>
+{% for a in library %}<tr><td>{{ a.maison }}</td><td><b>{{ a.name }}</b></td><td>{{ a.essence }}</td><td>{{ a.size_pct }}%</td><td>{{ a.value_pct }}%</td><td>{{ a.at_risk_pct }}%</td><td>{{ a.interests }}</td></tr>
+{% else %}<tr><td colspan="7" class="empty">Run an engagement diagnostic on a maison to start the library.</td></tr>{% endfor %}
+</tbody></table></section>
+
+<section class="block"><div class="block-h"><h2>Retention patterns by archetype (CRM labels)</h2></div>
+<table class="table"><thead><tr><th>Archetype</th><th>Clients</th><th>Avg engagement</th><th>Loyal / ambassador</th><th>At risk / dormant</th></tr></thead><tbody>
+{% for r in x.retention %}<tr><td><b>{{ r.archetype }}</b></td><td>{{ r.clients }}</td><td>{{ r.avg_engagement }}</td>
+<td><span class="meter"><i style="width: {{ r.loyal_pct }}%"></i></span> {{ r.loyal_pct }}%</td>
+<td><span class="meter warn"><i style="width: {{ r.at_risk_pct }}%"></i></span> {{ r.at_risk_pct }}%</td></tr>{% endfor %}
+</tbody></table></section>
+<div class="grid3">
+  <section class="panel"><h3>Experiential formats</h3>
+    <div class="bars">{% for f, n, imp in x.formats %}<div class="bar"><span class="k">{{ f }}</span><span class="track"><i style="width: {{ 20 * imp }}%"></i></span><span class="v">{{ n }} · {{ imp }}</span></div>{% else %}<p class="empty">No initiatives yet.</p>{% endfor %}</div>
+    <p class="hint">Bar = average emotional impact (1-5); count · impact.</p></section>
+  <section class="panel"><h3>Collaboration categories</h3>{{ bars(x.collab_categories) }}</section>
+  <section class="panel"><h3>Recurring strategy weaknesses</h3>{{ bars(x.audit_categories) }}</section>
+</div>
+<section class="block"><div class="block-h"><h2>Benchmarks</h2></div>
+<table class="table"><thead><tr><th>Maison</th><th>Sector</th><th>Clients</th><th>Engagement</th><th>Loyal</th><th>At risk</th><th>Avg LTV</th><th>Initiatives</th><th>AI kept</th></tr></thead><tbody>
+{% for b in x.benchmarks %}<tr><td><b>{{ b.label }}</b></td><td>{{ b.sector }}</td><td>{{ b.clients }}</td><td>{{ b.avg_engagement }}</td><td>{{ b.loyal_pct }}%</td><td>{{ b.at_risk_pct }}%</td><td>{{ b.avg_ltv|money }}</td><td>{{ b.initiatives }}</td><td>{{ b.acceptance_pct }}%</td></tr>{% endfor %}
+</tbody></table></section>
+
+<section class="block" id="query"><div class="block-h"><div><h2>Analytical queries</h2><p class="lede">Slice the anonymised portfolio any way you like; save the views you return to.</p></div></div>
+<div class="grid2">
+  <div class="panel">
+    <form method="get" class="form" action="#query">
+      <div class="cols3">
+        <label>Group by<select name="dimension">{% for k, v in dims.items() %}<option value="{{ k }}" {{ 'selected' if q.dimension == k }}>{{ v }}</option>{% endfor %}</select></label>
+        <label>Metric<select name="metric">{% for k, v in metrics.items() %}<option value="{{ k }}" {{ 'selected' if q.metric == k }}>{{ v }}</option>{% endfor %}</select></label>
+        <label>Sector<select name="sector"><option value="">All sectors</option>{% for s in sectors %}<option {{ 'selected' if q.sector == s }}>{{ s }}</option>{% endfor %}</select></label>
+      </div>
+      <button class="btn ghost">Run</button>
+    </form>
+    <h3>{{ metrics[q.metric] }} by {{ dims[q.dimension]|lower }}{{ ' · ' ~ q.sector if q.sector }}</h3>
+    {% set pairs = [] %}{% for k, v, n in results %}{% set _ = pairs.append((k ~ ' (' ~ n ~ ')', v)) %}{% endfor %}
+    {{ bars(pairs, 14) }}
+    <form method="post" class="inline-form"><input type="hidden" name="dimension" value="{{ q.dimension }}"><input type="hidden" name="metric" value="{{ q.metric }}"><input type="hidden" name="sector" value="{{ q.sector }}">
+      <input name="name" placeholder="Name this query"><button class="btn ghost">Save query</button></form>
+  </div>
+  <div class="panel"><h3>Saved queries</h3><ul class="list">
+    {% for s in saved %}<li><a href="?dimension={{ s.dimension }}&metric={{ s.metric }}&sector={{ s.sector|urlencode }}#query">{{ s.name }}</a> <small>{{ metrics.get(s.metric) }} by {{ dims.get(s.dimension) }}{{ ' · ' ~ s.sector if s.sector }}</small>
+      <form method="post" style="display:inline"><input type="hidden" name="action" value="delete_query"><input type="hidden" name="id" value="{{ s.id }}"><button class="link danger">×</button></form></li>
+    {% else %}<li class="empty">None yet.</li>{% endfor %}</ul></div>
+</div></section>
+
+{{ block('brief', groups.brief, None, 'Synthesised reports on luxury client behaviour — publishable as Vestige thought leadership once refined.') }}
+<p><a class="btn ghost" href="{{ url_for('v.deck_new', source='s:internal') }}">Turn briefs into a report deck →</a></p>
+{% endblock %}

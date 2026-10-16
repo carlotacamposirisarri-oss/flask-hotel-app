@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Clients · {{ brand.name }}{% endblock %}
+{% block content %}
+<header class="hero small">
+  <p class="eyebrow">{{ brand.name }} · Client intelligence</p>
+  <h1>The client gallery</h1>
+  <p class="lede">{{ stats.count }} behavioural portraits. Filter, open a profile, or bring in more from the CRM.</p>
+  <div class="row">
+    <a class="btn" href="{{ url_for('v.discovery', brand_id=brand.id) }}">✦ AI client discovery</a>
+    <a class="btn ghost" href="{{ url_for('v.client_form', brand_id=brand.id) }}">+ Add manually</a>
+    <a class="btn ghost" href="{{ url_for('v.crm_import', brand_id=brand.id) }}">Import CRM export</a>
+  </div>
+</header>
+<form class="filters" method="get">
+  <input name="q" value="{{ request.args.q or '' }}" placeholder="Search name, city, notes">
+  <select name="phase"><option value="">All phases</option>{% for p in phases %}<option {{ 'selected' if request.args.phase == p }}>{{ p }}</option>{% endfor %}</select>
+  <select name="archetype"><option value="">All archetypes</option>{% for a in archetypes %}<option {{ 'selected' if request.args.archetype == a }}>{{ a }}</option>{% endfor %}</select>
+  <select name="interest"><option value="">All interests</option>{% for c in clusters %}<option {{ 'selected' if request.args.interest == c }}>{{ c }}</option>{% endfor %}</select>
+  <button class="btn ghost">Filter</button>
+</form>
+<div class="gallery">
+  {% for c in clients %}
+  <a class="client-card" href="{{ url_for('v.client', brand_id=brand.id, client_id=c.id) }}">
+    <div class="avatar">{{ c.name|initials }}</div>
+    <div class="cc-body">
+      <h3>{{ c.name }}</h3>
+      <p class="muted">{{ c.city }}{{ ', ' if c.city and c.country }}{{ c.country }} · {{ c.tier }}</p>
+      <p class="cc-arch">{{ c.archetype or 'Archetype to define' }}</p>
+      <div class="tags">{% for i in c.interests[:4] %}<span>{{ i }}</span>{% endfor %}</div>
+    </div>
+    <div class="cc-side">
+      <span class="phase ph-{{ c.phase|lower|replace(' ', '-') }}">{{ c.phase }}</span>
+      <div class="ring" style="--v: {{ c.engagement_score }}"><b>{{ c.engagement_score }}</b></div>
+      <small>{{ c.lifetime_value|money }}</small>
+    </div>
+  </a>
+  {% else %}<p class="empty">No clients match. Add one, run AI discovery, or import a CRM export.</p>{% endfor %}
+</div>
+{% endblock %}

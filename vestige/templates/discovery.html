@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="hero small"><p class="eyebrow">{{ brand.name }} · Client discovery</p><h1>From scattered notes to a behavioural portrait.</h1>
+<p class="lede">Paste everything you know — advisor notes, event observations, public signals. The AI structures it into a profile with affinity scores and flags what is missing. Nothing is saved until you confirm.</p></header>
+<form method="post" class="panel form" data-loading>
+  <label>Raw notes<textarea name="notes" rows="9" required placeholder="Met at the Venice Biennale preview with her husband; collects post-war Italian art; sits on the board of a children's foundation in Milan; keen sailor (Rolex Giraglia); bought two tourbillons from a competitor last year…">{{ notes }}</textarea></label>
+  <div class="row"><select name="provider"><option value="">{{ ai_status.label }} (default)</option><option value="claude" {{ 'disabled' if not ai_status.claude }}>Claude</option><option value="astra" {{ 'disabled' if not ai_status.astra }}>Chat Astra</option></select>
+  <button class="btn">✦ Structure this profile</button></div>
+</form>
+{% if draft %}
+<section class="block">
+  <div class="block-h"><div><h2>Proposed portrait</h2><p class="stamp">{{ model }} · filtered through {{ brand.name }}</p></div></div>
+  {% if draft.summary %}<p class="note"><b>Opportunity</b> {{ draft.summary }}</p>{% endif %}
+  <form method="post" action="{{ url_for('v.client_form', brand_id=brand.id) }}" class="panel form">
+    <input type="hidden" name="source" value="ai-discovery">
+    {% set client = draft %}
+    {% include "partials/client_fields.html" %}
+    <button class="btn">Accept & save profile</button>
+  </form>
+</section>
+{% endif %}
+{% endblock %}

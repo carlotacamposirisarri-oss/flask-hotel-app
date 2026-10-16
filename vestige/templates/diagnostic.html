@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Diagnostic #{{ d.id }} · {{ brand.name }}{% endblock %}
+{% block head %}{% if d.status in ('queued', 'running') %}<meta http-equiv="refresh" content="5">{% endif %}{% endblock %}
+{% block content %}
+<header class="hero small">
+  <p class="eyebrow">{{ brand.name }} · Engagement Diagnostic #{{ d.id }} · {{ d.created_at[:10] }}</p>
+  <h1>{{ d.strategy.headline or 'Engagement Diagnostic' }}</h1>
+  {% if d.status == 'done' %}
+  <div class="row">
+    <a class="btn" href="{{ url_for('v.diagnostic_report', brand_id=brand.id, diag_id=d.id) }}" target="_blank">Analytical report (PDF)</a>
+    <form method="post" action="{{ url_for('v.diagnostic_deck', brand_id=brand.id, diag_id=d.id) }}"><button class="btn ghost">{{ 'Rebuild deck' if d.deck_id else 'Build presentation deck' }}</button></form>
+    {% if d.deck_id %}<a class="btn ghost" href="{{ url_for('v.deck_view', deck_id=d.deck_id) }}" target="_blank">View deck</a>{% endif %}
+    <span class="stamp">{{ d.model }} · filtered through {{ brand.name }}</span>
+  </div>
+  {% endif %}
+</header>
+
+{% if d.status in ('queued', 'running') %}
+<section class="panel progress">
+  <h3>Running…</h3>
+  <ol class="stages">
+    {% set ns = namespace(done=true) %}
+    {% for key, label in stages %}
+      {% if key == d.stage %}{% set ns.done = false %}<li class="now"><span class="orb small"></span>{{ label }}</li>
+      {% elif ns.done %}<li class="done">✓ {{ label }}</li>
+      {% else %}<li>{{ label }}</li>{% endif %}
+    {% endfor %}
+  </ol>
+  <p class="hint">This page refreshes by itself. You can leave and come back.</p>
+</section>
+{% elif d.status == 'error' %}
+<div class="flash error">{{ d.error }}</div>
+{% endif %}
+
+{% if d.segmentation.segments %}{% include "partials/report_body.html" %}{% endif %}
+
+<form method="post" action="{{ url_for('v.diagnostic_delete', brand_id=brand.id, diag_id=d.id) }}" class="danger-zone" onsubmit="return confirm('Delete this diagnostic?')"><button class="link danger">Delete diagnostic</button></form>
+{% endblock %}

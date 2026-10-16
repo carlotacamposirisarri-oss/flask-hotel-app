@@ -1,0 +1,58 @@
+{% set d = p.dossier %}{% set pt = p.pitch %}{% set pitch = pt.pitch or {} %}
+{% if pt.the_problem %}
+<section class="rsec">
+  <p class="eyebrow">01 · The opportunity</p>
+  <h2>{{ pitch.angle }}</h2>
+  <div class="tiles"><div class="tile"><b>{{ p.fit_score }}</b><span>Fit with Vestige</span></div>
+    <div class="tile"><b>{{ d.problem_signals|length }}</b><span>Problem signals</span></div>
+    <div class="tile"><b>{{ p.sources|length }}</b><span>Sources</span></div></div>
+  <p class="lede">{{ pt.the_problem }}</p>
+  <p><b>Fit:</b> {{ pt.fit_rationale }}</p><p><b>Timing:</b> {{ pt.timing }}</p>
+</section>
+{% endif %}
+{% if d.snapshot %}
+<section class="rsec">
+  <p class="eyebrow">02 · Public footprint</p>
+  <h2>{{ p.company }} today</h2>
+  <dl class="kv">{% for k, v in d.snapshot.items() %}<dt>{{ k|label }}</dt><dd>{{ v }}</dd>{% endfor %}</dl>
+  {% if d.initiatives %}<h3>Strategic initiatives</h3>
+  <table class="table"><thead><tr><th>Initiative</th><th>Type</th><th>Date</th><th>Source</th></tr></thead><tbody>
+  {% for i in d.initiatives %}<tr><td>{{ i.initiative }}</td><td>{{ i.type }}</td><td class="nowrap">{{ i.date }}</td><td>{% if i.source %}<a href="{{ i.source }}" target="_blank" rel="noopener">link</a>{% endif %}</td></tr>{% endfor %}
+  </tbody></table>{% endif %}
+  <div class="grid2 rgrid">
+    <div>{% if d.client_signals %}<h3>Who their clients are</h3><ul>{% for c in d.client_signals %}<li>{{ c.signal }}{% if c.source %} <a href="{{ c.source }}" target="_blank" rel="noopener">↗</a>{% endif %}</li>{% endfor %}</ul>{% endif %}
+      {% if d.likely_archetypes %}<h3>Likely archetypes</h3><ul>{% for a in d.likely_archetypes %}<li><b>{{ a.name }}</b> — {{ a.rationale }}</li>{% endfor %}</ul>{% endif %}</div>
+    <div>{% if d.competitors %}<h3>Competitors' moves</h3><ul>{% for c in d.competitors %}<li><b>{{ c.name }}</b>: {{ c.recent_actions }}{% if c.source %} <a href="{{ c.source }}" target="_blank" rel="noopener">↗</a>{% endif %}</li>{% endfor %}</ul>{% endif %}
+      {% if d.sentiment %}<h3>Public conversation</h3><p>{{ d.sentiment.summary }}</p><div class="tags">{% for t in d.sentiment.themes or [] %}<span>{{ t }}</span>{% endfor %}</div>{% endif %}</div>
+  </div>
+  {% if d.claims_and_reports %}<h3>Claims & reports</h3><ul>{% for c in d.claims_and_reports %}<li>“{{ c.claim }}” — {{ c.who }}, {{ c.date }}{% if c.source %} <a href="{{ c.source }}" target="_blank" rel="noopener">↗</a>{% endif %}</li>{% endfor %}</ul>{% endif %}
+</section>
+{% endif %}
+{% if d.problem_signals %}
+<section class="rsec">
+  <p class="eyebrow">03 · Problem signals</p>
+  <h2>What the evidence says</h2>
+  {% for s in d.problem_signals %}<div class="finding"><span class="chip sev-{{ s.severity }}">{{ s.severity }}</span> <span class="chip soft">{{ s.problem_type }}</span> <span class="chip">{{ s.fact_or_inference }}</span>
+    <h4>{{ s.signal }}</h4><p>{{ s.evidence }}{% if s.source %} <a href="{{ s.source }}" target="_blank" rel="noopener">source ↗</a>{% endif %}</p></div>{% endfor %}
+</section>
+{% endif %}
+{% if pt.opportunity_hypotheses %}
+<section class="rsec">
+  <p class="eyebrow">04 · The pitch</p>
+  <h2>“{{ pitch.hook }}”</h2>
+  {% for h in pt.opportunity_hypotheses %}<div class="finding opp"><h4>{{ h.hypothesis }}</h4><p>{{ h.evidence }}</p><p><b>Vestige:</b> {{ h.vestige_answer }} · <b>Value:</b> {{ h.value }}</p></div>{% endfor %}
+  <div class="grid2 rgrid">
+    <div><h3>Proof points</h3><ul>{% for x in pitch.proof_points or [] %}<li>{{ x }}</li>{% endfor %}</ul>
+      <h3>Entry offer</h3><p>{{ pitch.entry_offer }}</p>
+      <h3>Who to approach</h3><p>{{ (pt.decision_makers or [])|join(' · ') }}</p></div>
+    <div><h3>Objections</h3>{% for o in pitch.objections or [] %}<p><b>{{ o.objection }}</b><br>{{ o.response }}</p>{% endfor %}</div>
+  </div>
+</section>
+{% endif %}
+{% if p.sources %}
+<section class="rsec sources"><p class="eyebrow">Sources</p>
+  <ol>{% for s in p.sources %}<li><a href="{{ s.url }}" target="_blank" rel="noopener">{{ s.title|truncate(110) }}</a></li>{% endfor %}</ol>
+  {% if not p.used_web %}<p class="flash error">This dossier was produced without web access — statements are not source-verified.</p>{% endif %}
+  {% if d.caveats %}<p class="muted"><i>{{ d.caveats }}</i></p>{% endif %}
+</section>
+{% endif %}

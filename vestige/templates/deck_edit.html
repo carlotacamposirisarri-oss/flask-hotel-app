@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="hero small"><p class="eyebrow">Deliverable studio · {{ brand.name if brand else 'Vestige internal' }} · {{ deck.model }}</p>
+<h1>{{ deck.title }}</h1>
+<div class="row"><a class="btn" href="{{ url_for('v.deck_view', deck_id=deck.id) }}" target="_blank">Present / Save as PDF</a>
+<a class="btn ghost" href="{{ url_for('v.deck_pptx', deck_id=deck.id) }}">Export PowerPoint</a></div></header>
+<form method="post" id="deck-form" class="deck-editor">
+  <label>Deck title<input name="title" value="{{ deck.title }}"></label>
+  <input type="hidden" name="slides" id="slides-json">
+  <div id="slides" data-slides='{{ deck.slides|tojson }}' data-types='{{ types|tojson }}'></div>
+  <div class="row sticky-actions">
+    <button type="button" class="btn ghost" id="add-slide">+ Add slide</button>
+    <button class="btn">Save deck</button>
+  </div>
+</form>
+{% endblock %}
+{% block scripts %}<script>Vestige.deckEditor();</script>{% endblock %}
