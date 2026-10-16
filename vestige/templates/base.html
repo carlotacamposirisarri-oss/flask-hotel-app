@@ -40,6 +40,7 @@
       <a href="{{ url_for('v.deliverables') }}" class="{{ 'on' if path.startswith('/deliverables') }}">Deliverable studio</a>
       <a href="{{ url_for('v.settings') }}" class="{{ 'on' if path.startswith('/settings') }}">Settings</a>
     </nav>
+    {% if auth_enabled %}<form method="post" action="{{ url_for('auth.logout') }}" class="logout"><button>Sign out</button></form>{% endif %}
     <a class="ai-pill {{ 'live' if ai_status.active else 'off' }}" href="{{ url_for('v.settings') }}" title="AI connection">
       <i></i>{{ ai_status.label }}
     </a>

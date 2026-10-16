@@ -311,3 +311,12 @@ body.present { background: #CFC6B8; }
   .fields dl { grid-template-columns: 1fr; }
   .sl-cols.two { grid-template-columns: 1fr; }
 }
+
+/* Login */
+.login-page { min-height: 100vh; display: grid; place-items: center; padding: 16px; background: var(--ink); }
+.login-card { background: var(--bone); padding: 40px 36px; width: min(380px, 100%); display: grid; gap: 16px; }
+.login-card label { font-size: .74rem; text-transform: uppercase; letter-spacing: .12em; color: var(--ink-2); display: grid; gap: 6px; }
+.wordmark-dark { font: 400 2rem var(--serif); letter-spacing: .32em; margin: 0 0 8px; text-align: center; }
+.wordmark-dark small { display: block; font: 400 .62rem var(--sans); letter-spacing: .3em; text-transform: uppercase; color: var(--accent); }
+.side .logout { margin: 0; }
+.side .logout button { background: none; border: 0; color: #8B7F70; font: .78rem var(--sans); cursor: pointer; padding: 4px 10px; }

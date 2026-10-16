@@ -3,9 +3,12 @@ and growth platform for Vestige (vestigeloyalty.com)."""
 import os
 import secrets
 
-from flask import Flask, request
+from datetime import timedelta
 
-from . import ai, db
+from flask import Flask, request
+from werkzeug.middleware.proxy_fix import ProxyFix
+
+from . import ai, auth, db
 from .prompts import KINDS
 
 
@@ -24,18 +27,34 @@ def create_app(instance_path=None):
     app = Flask(__name__, instance_path=instance_path or os.environ.get(
         "VESTIGE_INSTANCE", os.path.join(os.path.dirname(os.path.abspath(__file__)), "instance")))
     app.config.update(SECRET_KEY=os.environ.get("VESTIGE_SECRET_KEY") or _secret_key(app),
-                      MAX_CONTENT_LENGTH=25 * 1024 * 1024)
+                      MAX_CONTENT_LENGTH=25 * 1024 * 1024,
+                      SESSION_COOKIE_HTTPONLY=True,
+                      SESSION_COOKIE_SAMESITE="Lax",
+                      PERMANENT_SESSION_LIFETIME=timedelta(days=14))
+    if os.environ.get("RENDER") or os.environ.get("VESTIGE_BEHIND_PROXY"):
+        app.config["SESSION_COOKIE_SECURE"] = True
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
     app.teardown_appcontext(db.close_db)
     with app.app_context():
         db.init_db()
+        if os.environ.get("VESTIGE_DEMO_SEED") == "1":
+            from .seed import seed
+            seed()  # no-op once any maison exists
 
     from .views import bp
     app.register_blueprint(bp)
+    app.register_blueprint(auth.bp)
+    app.before_request(auth.guard)
+
+    @app.route("/healthz")
+    def healthz():
+        return "ok"
 
     @app.context_processor
     def globals_():
         brand_list = db.query("SELECT id, name, sector, accent_color FROM brands ORDER BY name")
-        return {"ai_status": ai.status(), "all_brands": brand_list, "KINDS": KINDS, "path": request.path}
+        return {"ai_status": ai.status(), "all_brands": brand_list, "KINDS": KINDS, "path": request.path,
+                "auth_enabled": auth.auth_required()}
 
     @app.template_filter("money")
     def money(v):

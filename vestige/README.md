@@ -17,8 +17,18 @@ Then open **Settings** and paste the Anthropic API key (or set `ANTHROPIC_API_KE
 in `.env`). Keys stay on the server: env vars or `vestige/instance/secrets.json`
 (mode 600). They are never sent to the browser.
 
-> No login yet (as specified). The server binds to `127.0.0.1` by default — put it
-> behind authentication before exposing it on a network.
+Locally there is no login (bound to `127.0.0.1`). Set `VESTIGE_PASSWORD` to require one.
+
+## Deploy on Render
+
+1. Render → **New → Blueprint** → select this repository (uses `render.yaml`).
+2. Fill in `VESTIGE_PASSWORD` (the shared access password) and `ANTHROPIC_API_KEY`.
+3. Deploy. Data lives on a 1 GB persistent disk at `/var/data` (requires the paid Starter instance;
+   on a free instance the database would be wiped on every restart).
+4. Optional: set `VESTIGE_DEMO_SEED=1` once to load the fictional demo portfolio, then remove it.
+
+On Render the app refuses to serve anything until `VESTIGE_PASSWORD` is set. Sessions use secure,
+HTTP-only cookies; login is throttled to 5 attempts per 15 minutes per IP.
 
 ## What's inside
 

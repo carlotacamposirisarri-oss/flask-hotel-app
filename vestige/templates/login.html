@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vestige Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='vestige.css') }}">
+</head>
+<body class="login-page">
+  <form method="post" class="login-card">
+    <p class="wordmark-dark">VESTIGE<small>Intelligence</small></p>
+    {% if misconfigured %}
+      <p class="flash error">This instance has no access password configured. Set <code>VESTIGE_PASSWORD</code> in the hosting environment and restart.</p>
+    {% else %}
+      {% if error %}<p class="flash error">{{ error }}</p>{% endif %}
+      <label>Password<input type="password" name="password" autofocus required autocomplete="current-password"></label>
+      <button class="btn">Enter</button>
+    {% endif %}
+  </form>
+</body></html>
