@@ -8,6 +8,7 @@
   <h1>{{ brand.name }}</h1>
   <p class="lede">{{ brand.positioning }}</p>
   <div class="row">
+    <a class="btn" href="{{ url_for('v.diagnostics', brand_id=brand.id) }}">✦ Engagement diagnostic</a>
     <a class="btn ghost" href="{{ url_for('v.brand_form', brand_id=brand.id) }}">Edit maison codes</a>
     <a class="btn ghost" href="{{ url_for('v.deck_new', source='b:' ~ brand.id) }}">Build a deliverable</a>
   </div>

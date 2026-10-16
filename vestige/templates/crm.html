@@ -1,11 +1,14 @@
 {% extends "base.html" %}
 {% block content %}
 <header class="hero small"><p class="eyebrow">{{ brand.name }} · CRM integration</p><h1>Bring in the maison's CRM.</h1>
-<p class="lede">Upload a CSV or Excel export from Salesforce, HubSpot, SAP Customer Data, Cegid or any clienteling tool. Columns are mapped automatically — you confirm before anything is written. Existing clients are updated (matched on email, then name).</p></header>
+<p class="lede">Two kinds of file: a <b>client export</b> (one row per client) and a <b>transactions export</b> (one row per purchase — dates, amounts, categories), which builds each client's purchase history: frequency, recency, average ticket and categories. Upload a CSV or Excel export from Salesforce, HubSpot, SAP Customer Data, Cegid or any clienteling tool. Columns are mapped automatically — you confirm before anything is written. Existing clients are updated (matched on email, then name).</p></header>
 {% if not stash %}
 <form method="post" enctype="multipart/form-data" class="panel form">
   <div class="cols">
     <label>Export file (.csv, .xlsx)<input type="file" name="file" accept=".csv,.xlsx,.xlsm,.txt" required></label>
+    <label>File type<select name="kind"><option value="clients">Clients — one row per client</option><option value="transactions">Transactions — one row per purchase</option></select></label>
+  </div>
+  <div class="cols">
     <label>Source system<select name="source_system">{% for s in ['Salesforce','HubSpot','SAP','Microsoft Dynamics','Cegid','Other'] %}<option>{{ s }}</option>{% endfor %}</select></label>
   </div>
   <div class="row"><button class="btn">Upload & map fields</button><a class="link" href="{{ url_for('v.crm_template') }}">Download a template</a></div>
@@ -18,14 +21,14 @@
 <form method="post" class="panel form">
   <input type="hidden" name="token" value="{{ token }}">
   <input type="hidden" name="source_system" value="{{ source_system }}">
-  <h3>{{ stash.filename }} — {{ stash.rows|length }} rows</h3>
+  <h3>{{ stash.filename }} — {{ stash.rows|length }} rows · {{ 'transactions' if stash.kind == 'transactions' else 'clients' }}</h3>
   <table class="table mapping"><thead><tr><th>CRM column</th><th>Sample</th><th>Vestige field</th></tr></thead><tbody>
   {% for h in stash.headers %}
     <tr><td><b>{{ h }}</b></td><td class="muted">{{ (stash.rows[0][h] if stash.rows else '')|truncate(48) }}</td>
     <td><select name="map_{{ loop.index0 }}">{% for k, lbl in fields.items() %}<option value="{{ k }}" {{ 'selected' if mapping[h] == k }}>{{ lbl }}</option>{% endfor %}</select></td></tr>
   {% endfor %}
   </tbody></table>
-  <div class="row"><button class="btn">Import {{ stash.rows|length }} clients</button><a class="btn ghost" href="{{ url_for('v.crm_import', brand_id=brand.id) }}">Start over</a></div>
+  <div class="row"><button class="btn">Import {{ stash.rows|length }} {{ 'purchases' if stash.kind == 'transactions' else 'clients' }}</button><a class="btn ghost" href="{{ url_for('v.crm_import', brand_id=brand.id) }}">Start over</a></div>
 </form>
 {% endif %}
 {% endblock %}

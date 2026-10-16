@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ p.company }} — Opportunity report</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='vestige.css') }}">
+</head>
+<body class="report-doc">
+<div class="present-bar"><a href="{{ url_for('v.prospect', pid=p.id) }}">← Back</a><button onclick="window.print()">Print / Save as PDF</button></div>
+<article class="report-paper">
+  <header class="report-cover">
+    <p class="eyebrow">Vestige · Opportunity report · Internal</p>
+    <h1>{{ p.company }}</h1>
+    <h2>{{ (p.pitch.pitch or {}).angle }}</h2>
+    <p class="muted">{{ p.updated_at[:10] }} · {{ p.sector }} · {{ p.market }}</p>
+  </header>
+  {% include "partials/prospect_body.html" %}
+  <footer class="report-foot">Vestige · vestigeloyalty.com — Public-source research generated with {{ p.model }}; verify before external use.</footer>
+</article>
+</body></html>

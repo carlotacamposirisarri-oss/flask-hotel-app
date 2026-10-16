@@ -14,6 +14,10 @@
     <h2>{{ s.title }}</h2>
     {% set peak = (s.bars|map(attribute='value')|max) if s.bars else 1 %}
     <div class="sl-bars">{% for b in s.bars or [] %}<div><span>{{ b.label }}</span><i style="width: {{ (90 * b.value / (peak or 1))|round }}%"></i><em>{{ b.value }}</em></div>{% endfor %}</div>
+  {% elif s.type == 'matrix' %}
+    <h2>{{ s.title }}</h2>
+    <table class="sl-matrix"><thead><tr><th></th>{% for c in s.columns or [] %}<th>{{ c }}</th>{% endfor %}</tr></thead>
+    <tbody>{% for r in s.rows or [] %}<tr><th>{{ r.label }}</th>{% for v in r['values'] %}<td style="--h: {{ v|float / 100 }}"><span>{{ v }}</span></td>{% endfor %}</tr>{% endfor %}</tbody></table>
   {% elif s.type == 'quote' %}
     <blockquote>“{{ s.body }}”</blockquote>
     {% if s.title %}<p class="sl-sub">— {{ s.title }}</p>{% endif %}

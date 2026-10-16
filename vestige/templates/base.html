@@ -26,7 +26,7 @@
           <i style="background: {{ b.accent_color }}"></i>{{ b.name }}</a>
         {% if here %}
         <div class="sub">
-          {% for slug, label in [('clients','Clients'),('discovery','Client discovery'),('crm','CRM import'),('competitors','Competitors'),('insights','Insights & prospecting'),('studio','Story & community'),('retention','Retention & experiences'),('collaborations','Collaborations'),('emotion','Emotion & audit')] %}
+          {% for slug, label in [('diagnostics','✦ Engagement diagnostic'),('clients','Clients'),('discovery','Client discovery'),('crm','CRM import'),('competitors','Competitors'),('insights','Insights & analyst'),('studio','Story & community'),('retention','Retention & experiences'),('collaborations','Collaborations'),('emotion','Emotion & audit')] %}
             {% set href = '/b/' ~ b.id ~ '/' ~ slug %}
             <a href="{{ href }}" class="{{ 'on' if path.startswith(href) }}">{{ label }}</a>
           {% endfor %}
@@ -35,6 +35,7 @@
       {% endfor %}
       <a href="{{ url_for('v.brand_form') }}" class="add">+ New engagement</a>
       <p class="nav-h">Vestige</p>
+      <a href="{{ url_for('v.prospects') }}" class="{{ 'on' if path.startswith('/prospects') }}">✦ Prospecting</a>
       <a href="{{ url_for('v.intelligence') }}" class="{{ 'on' if path.startswith('/intelligence') }}">Intelligence layer</a>
       <a href="{{ url_for('v.growth') }}" class="{{ 'on' if path.startswith('/growth') }}">Growth studio</a>
       <a href="{{ url_for('v.deliverables') }}" class="{{ 'on' if path.startswith('/deliverables') }}">Deliverable studio</a>

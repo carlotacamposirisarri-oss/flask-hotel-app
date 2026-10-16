@@ -252,6 +252,16 @@ def growth_context():
         n_decks = db.scalar("SELECT COUNT(*) FROM decks WHERE brand_id = ?", (b["id"],))
         eng.append(f"- {labels[b['id']]}: sector {b['sector']}, market {b['market']}, started {b['created_at'][:10]}, "
                    f"{n_items} work items, {n_decks} deliverables, known gaps: {b['strategic_gaps'][:140]}")
+    from . import diagnostic  # local import: diagnostic imports analytics
+
+    diag_digest = "\n".join(diagnostic.summary_for_vestige(labels.get(d["brand_id"], "Maison"), d)
+                            for d in diagnostic.latest_per_brand()) or "No completed diagnostics yet."
+    pros = db.query("SELECT stage, sector, fit_score, dossier FROM prospects")
+    prob = Counter(sig.get("problem_type", "other") for p in pros for sig in (p["dossier"] or {}).get("problem_signals", []))
+    pros_digest = (f"{len(pros)} prospects · by stage: {', '.join(f'{k} {v}' for k, v in Counter(p['stage'] for p in pros).most_common())}"
+                   f"\nBy sector: {', '.join(f'{k} {v}' for k, v in Counter(p['sector'] or 'n/a' for p in pros).most_common(8))}"
+                   f"\nAverage fit: {_avg([p['fit_score'] for p in pros if p['fit_score'] is not None])}"
+                   f"\nPublic problem signals seen in prospects: {', '.join(f'{k} {v}' for k, v in prob.most_common())}") if pros else "No prospects yet."
     return f"""## Vestige practice data
 Active engagements: {k['engagements']} · clients tracked {k['clients']} · deliverables {k['deliverables']}
 AI work items {k['ai_items']} (accepted {k['accepted']}, utilisation {k['utilisation_pct']}%)
@@ -265,7 +275,15 @@ Work mix by type: {', '.join(f'{a} {b}' for a, b in kinds.most_common())}
 
 ### Active growth goals
 """ + ("\n".join(f"- {g['title']} — metric {g['metric']}: {g['current']:g} / {g['target']:g}, due {g['due']}. "
-                 f"{g['notes']}" for g in goals) or "none yet") + "\n\n" + internal_context()
+                 f"{g['notes']}" for g in goals) or "none yet") + f"""
+
+### Engagement diagnostics across clients (anonymised)
+{diag_digest}
+
+### Proactive pipeline (prospects researched)
+{pros_digest}
+
+""" + internal_context()
 
 
 CONTEXT_BUILDERS = {

@@ -30,6 +30,31 @@ Locally there is no login (bound to `127.0.0.1`). Set `VESTIGE_PASSWORD` to requ
 On Render the app refuses to serve anything until `VESTIGE_PASSWORD` is set. Sessions use secure,
 HTTP-only cookies; login is throttled to 5 attempts per 15 minutes per IP.
 
+## The two operating modes
+
+**Reactive — serving a client (Engagement Diagnostic).** Import the maison's CRM, either one row
+per client or one row per purchase. Then one run:
+1. **Segments** the whole base on interests, cross-industry and historic purchases, value,
+   frequency, recency and engagement. This step is deterministic k-means and needs no AI.
+2. **Names the archetypes** through the maison's lens, with every trait tied to a number.
+3. **Cross-examines** the archetypes against brand identity, current engagement & retention strategy
+   and budget allocation, and competitor actions. Output: weaknesses and opportunities.
+4. **Recommends** a resource reallocation and an experiential strategy, with emotional and
+   commercial KPIs.
+5. **Delivers** a printable analytical report and a deck (PDF / PowerPoint).
+
+**Proactive — finding clients (Prospecting).**
+- **Lead radar**: live web search for companies showing public signals of the problem Vestige solves.
+- **Dossier per lead**: initiatives, clients, competitors, claims, press and social conversation,
+  each with sources.
+- **Assessment and pitch**: fit score, pitch, entry offer and objections, plus outreach drafts.
+- **Deliverables**: an opportunity report and a pitch deck. A won lead becomes a client engagement
+  in one click.
+
+**Vestige layer.** Every diagnostic and prospect feeds the Intelligence layer and the Growth studio:
+the archetype library across maisons, recurring weaknesses, and problem signals in the pipeline.
+From those it produces recommendations on Vestige's IP, service, direction and growth.
+
 ## What's inside
 
 | Module | Where | What it does |

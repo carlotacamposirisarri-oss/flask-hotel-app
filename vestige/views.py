@@ -6,14 +6,15 @@ from datetime import date
 from flask import (Blueprint, Response, abort, flash, jsonify, redirect, render_template, request,
                    send_file, url_for)
 
-from . import ai, analytics, crm, db, decks
+from . import ai, analytics, crm, db, decks, diagnostic, prospecting
 from .prompts import (CLIENT_GAPS_PROMPT, DEFAULT_ARCHETYPES, DISCOVERY_PROMPT, INTEREST_CLUSTERS, KINDS,
                       PHASES, VESTIGE_SYSTEM, item_prompt)
 
 bp = Blueprint("v", __name__)
 
 BRAND_FIELDS = ["name", "sector", "market", "heritage", "core_values", "visual_codes", "tone_of_voice",
-                "archetypes", "positioning", "strategic_gaps", "accent_color"]
+                "archetypes", "positioning", "strategic_gaps", "accent_color", "current_strategy",
+                "resource_allocation"]
 CLIENT_FIELDS = ["name", "email", "country", "city", "tier", "archetype", "phase", "social_footprint",
                  "cross_purchases", "behavioral_signals", "info_gaps", "notes"]
 
@@ -115,9 +116,11 @@ def settings():
             db.set_setting("claude_effort", f["claude_effort"])
         db.set_setting("astra_base_url", f.get("astra_base_url", "").strip())
         db.set_setting("astra_model", f.get("astra_model", "").strip())
+        if f.get("vestige_offer", "").strip():
+            db.set_setting("vestige_offer", f["vestige_offer"].strip())
         flash("Settings saved. Keys are stored server-side only.", "ok")
         return redirect(url_for("v.settings"))
-    return render_template("settings.html", models=ai.CLAUDE_MODELS)
+    return render_template("settings.html", models=ai.CLAUDE_MODELS, offer=prospecting.offer())
 
 
 @bp.post("/settings/test")
@@ -349,6 +352,20 @@ def crm_import(brand_id):
                 flash("Upload expired — please upload the file again.", "error")
                 return redirect(request.path)
             mapping = {h: request.form.get(f"map_{i}", "") for i, h in enumerate(stash["headers"])}
+            if stash.get("kind") == "transactions":
+                if not any(v in ("name", "first_name", "last_name", "email", "client_ref") for v in mapping.values()) \
+                        or "amount" not in mapping.values():
+                    flash("Map a client identifier and the amount column.", "error")
+                    return render_template("crm.html", brand=b, stash=stash, token=token, mapping=mapping,
+                                           fields=crm.TX_FIELDS, logs=[])
+                n_clients, n_rows = crm.ingest_transactions(brand_id, stash["rows"], mapping)
+                db.insert("crm_imports", {"brand_id": brand_id, "filename": stash["filename"] + " (transactions)",
+                                          "source_system": request.form.get("source_system", ""),
+                                          "rows_total": len(stash["rows"]), "rows_imported": n_rows,
+                                          "mapping": mapping, "created_at": db.now()})
+                crm.drop_stash(token)
+                flash(f"Aggregated {n_rows} purchases into the history of {n_clients} clients.", "ok")
+                return redirect(url_for("v.clients", brand_id=brand_id))
             if not any(v in ("name", "first_name", "last_name") for v in mapping.values()):
                 flash("Map at least one column to a name field.", "error")
                 return render_template("crm.html", brand=b, stash=stash, token=token, mapping=mapping,
@@ -374,9 +391,12 @@ def crm_import(brand_id):
         if not headers or not rows:
             flash("The file has no data rows.", "error")
             return redirect(request.path)
-        token = crm.stash(headers, rows, f.filename)
-        return render_template("crm.html", brand=b, stash={"headers": headers, "rows": rows, "filename": f.filename},
-                               token=token, mapping=crm.auto_map(headers), fields=crm.FIELDS, logs=[],
+        kind = "transactions" if request.form.get("kind") == "transactions" else "clients"
+        token = crm.stash(headers, rows, f.filename, kind)
+        return render_template("crm.html", brand=b, stash={"headers": headers, "rows": rows, "filename": f.filename,
+                                                           "kind": kind},
+                               token=token, mapping=crm.auto_map_tx(headers) if kind == "transactions" else crm.auto_map(headers),
+                               fields=crm.TX_FIELDS if kind == "transactions" else crm.FIELDS, logs=[],
                                source_system=request.form.get("source_system", ""))
     logs = db.query("SELECT * FROM crm_imports WHERE brand_id = ? ORDER BY id DESC", (brand_id,))
     return render_template("crm.html", brand=b, stash=None, logs=logs, fields=crm.FIELDS)
@@ -402,13 +422,13 @@ def competitors(brand_id):
             db.update("brands", brand_id, {"map_x_label": f.get("map_x_label", ""), "map_y_label": f.get("map_y_label", ""),
                                            "map_x": _int(f.get("map_x"), 50, 0, 100), "map_y": _int(f.get("map_y"), 50, 0, 100)})
         else:
-            values = {k: f.get(k, "").strip() for k in ("name", "positioning", "client_tiers", "signals", "notes")}
+            values = {k: f.get(k, "").strip() for k in ("name", "positioning", "client_tiers", "signals", "actions", "notes")}
             values.update(axis_x=_int(f.get("axis_x"), 50, 0, 100), axis_y=_int(f.get("axis_y"), 50, 0, 100))
             if f.get("id"):
-                db.get_db().execute("UPDATE competitors SET name=?, positioning=?, client_tiers=?, signals=?, notes=?, "
-                                    "axis_x=?, axis_y=? WHERE id=? AND brand_id=?",
-                                    (*[values[k] for k in ("name", "positioning", "client_tiers", "signals", "notes",
-                                                           "axis_x", "axis_y")], f["id"], brand_id))
+                db.get_db().execute("UPDATE competitors SET name=?, positioning=?, client_tiers=?, signals=?, actions=?, "
+                                    "notes=?, axis_x=?, axis_y=? WHERE id=? AND brand_id=?",
+                                    (*[values[k] for k in ("name", "positioning", "client_tiers", "signals", "actions",
+                                                           "notes", "axis_x", "axis_y")], f["id"], brand_id))
                 db.get_db().commit()
             elif values["name"]:
                 db.insert("competitors", {**values, "brand_id": brand_id, "created_at": db.now()})
@@ -428,7 +448,7 @@ def competitor_delete(brand_id, comp_id):
 # --------------------------------------------------- generic work sections ----
 
 SECTION_PAGES = {
-    "insights": ("Insight Feed & Prospecting", ["insight", "prospect"],
+    "insights": ("Insight Feed & Analyst", ["insight", "prospect"],
                  "A living stream of observations, opportunities and risks — and an analyst on call for your questions."),
     "studio": ("Storytelling & Community Studio", ["story", "community"],
                "Narrative strategies and community blueprints, written through the maison's codes."),
@@ -561,7 +581,16 @@ def intelligence():
     dim = dim if dim in analytics.DIMENSIONS else "archetype"
     metric = metric if metric in analytics.METRICS else "avg_engagement"
     sectors = sorted({b["sector"] for b in db.query("SELECT sector FROM brands") if b["sector"]})
-    return render_template("intelligence.html", x=analytics.cross_brand(), groups=grouped(["brief"], scope="internal"),
+    labels, _ = analytics.anonymised_brands()
+    library = []
+    for d in diagnostic.latest_per_brand():
+        by_id = {sg["id"]: sg for sg in d["segmentation"].get("segments", [])}
+        for a in d["archetypes"].get("archetypes", []):
+            sg = by_id.get(a.get("segment_id"), {})
+            library.append({"maison": labels.get(d["brand_id"], "Maison"), "name": a.get("name"), "essence": a.get("essence"),
+                            "size_pct": sg.get("size_pct"), "value_pct": sg.get("value_pct"), "at_risk_pct": sg.get("at_risk_pct"),
+                            "interests": ", ".join(r["label"] for r in sg.get("interests", [])[:3])})
+    return render_template("intelligence.html", x=analytics.cross_brand(), library=library, groups=grouped(["brief"], scope="internal"),
                            dims=analytics.DIMENSIONS, metrics=analytics.METRICS, sectors=sectors,
                            q={"dimension": dim, "metric": metric, "sector": sector},
                            results=analytics.run_query(dim, metric, sector),
@@ -596,9 +625,10 @@ def growth():
     series = {}
     for k in kpis:
         series.setdefault(k["name"], []).append(k)
-    return render_template("growth.html", kpis=analytics.practice_kpis(), series=series,
+    pipeline = db.query("SELECT stage, COUNT(*) AS n, AVG(fit_score) AS fit FROM prospects GROUP BY stage")
+    return render_template("growth.html", kpis=analytics.practice_kpis(), series=series, pipeline=pipeline,
                            goals=db.query("SELECT * FROM goals ORDER BY status, due"),
-                           groups=grouped(["growth_plan", "radar", "health_check", "course_correction"], scope="growth"),
+                           groups=grouped(["growth_plan", "vestige_ip", "radar", "health_check", "course_correction"], scope="growth"),
                            today=date.today())
 
 
@@ -686,3 +716,151 @@ def deck_delete(deck_id):
     get_deck(deck_id)
     db.delete("decks", deck_id)
     return redirect(url_for("v.deliverables"))
+
+
+# ------------------------------------------------------------ diagnostics ----
+
+def get_diag(brand_id, diag_id):
+    return db.query("SELECT * FROM diagnostics WHERE id = ? AND brand_id = ?", (diag_id, brand_id), one=True) or abort(404)
+
+
+def readiness(brand, stats):
+    comps = db.query("SELECT actions FROM competitors WHERE brand_id = ?", (brand["id"],))
+    clients = stats["clients"]
+    n = len(clients) or 1
+    return [
+        ("Client base", len(clients) >= 6, f"{len(clients)} clients" + ("" if len(clients) >= 30 else " — 30+ gives sturdier archetypes")),
+        ("Interests", any(c["interests"] for c in clients), f"{round(100 * sum(bool(c['interests']) for c in clients) / n)}% of clients"),
+        ("Purchase history", any(c.get("purchase_count") for c in clients), f"{round(100 * sum(bool(c.get('purchase_count')) for c in clients) / n)}% of clients"),
+        ("Cross-industry purchases", any(c["cross_purchases"] for c in clients), f"{round(100 * sum(bool(c['cross_purchases']) for c in clients) / n)}% of clients"),
+        ("Brand identity", bool(brand["heritage"] and brand["tone_of_voice"]), "heritage, values, codes, tone"),
+        ("Current engagement & retention strategy", bool(brand["current_strategy"]), "what they do today"),
+        ("Resource allocation", bool(brand["resource_allocation"]), "where the budget goes"),
+        ("Competitor actions", any(c["actions"] for c in comps), f"{sum(bool(c['actions']) for c in comps)} of {len(comps)} competitors"),
+    ]
+
+
+@bp.route("/b/<int:brand_id>/diagnostics", methods=["GET", "POST"])
+def diagnostics(brand_id):
+    b = get_brand(brand_id)
+    if request.method == "POST":
+        if db.scalar("SELECT COUNT(*) FROM clients WHERE brand_id = ?", (brand_id,)) < 6:
+            flash("Import at least 6 clients before running a diagnostic.", "error")
+            return redirect(request.path)
+        diag_id = diagnostic.start(brand_id, request.form.get("brief", ""), request.form.get("provider") or None)
+        return redirect(url_for("v.diagnostic_view", brand_id=brand_id, diag_id=diag_id))
+    stats = analytics.portfolio_stats(brand_id)
+    runs = db.query("SELECT id, status, stage, error, model, created_at, finished_at, deck_id FROM diagnostics "
+                    "WHERE brand_id = ? ORDER BY id DESC", (brand_id,))
+    return render_template("diagnostics.html", brand=b, runs=runs, ready=readiness(b, stats), stats=stats)
+
+
+@bp.route("/b/<int:brand_id>/diagnostics/<int:diag_id>")
+def diagnostic_view(brand_id, diag_id):
+    b = get_brand(brand_id)
+    d = get_diag(brand_id, diag_id)
+    return render_template("diagnostic.html", brand=b, d=d, stages=diagnostic.STAGES, standalone=False)
+
+
+@bp.route("/b/<int:brand_id>/diagnostics/<int:diag_id>/report")
+def diagnostic_report(brand_id, diag_id):
+    b = get_brand(brand_id)
+    d = get_diag(brand_id, diag_id)
+    return render_template("report.html", brand=b, d=d, standalone=True)
+
+
+@bp.route("/b/<int:brand_id>/diagnostics/<int:diag_id>/status")
+def diagnostic_status(brand_id, diag_id):
+    d = get_diag(brand_id, diag_id)
+    return jsonify(status=d["status"], stage=d["stage"], error=d["error"])
+
+
+@bp.post("/b/<int:brand_id>/diagnostics/<int:diag_id>/deck")
+def diagnostic_deck(brand_id, diag_id):
+    b = get_brand(brand_id)
+    d = get_diag(brand_id, diag_id)
+    if d["status"] != "done":
+        abort(400)
+    slides = decks.from_diagnostic(b, d)
+    deck_id = db.insert("decks", {"brand_id": brand_id, "title": f"{b['name']} — Engagement Diagnostic",
+                                  "subtitle": "", "audience": "client", "slides": slides, "model": d["model"],
+                                  "created_at": db.now(), "updated_at": db.now()})
+    db.update("diagnostics", diag_id, {"deck_id": deck_id})
+    return redirect(url_for("v.deck_edit", deck_id=deck_id))
+
+
+@bp.post("/b/<int:brand_id>/diagnostics/<int:diag_id>/delete")
+def diagnostic_delete(brand_id, diag_id):
+    get_diag(brand_id, diag_id)
+    db.delete("diagnostics", diag_id)
+    return redirect(url_for("v.diagnostics", brand_id=brand_id))
+
+
+# ------------------------------------------------------------- prospects ----
+
+def get_prospect(pid):
+    return db.query("SELECT * FROM prospects WHERE id = ?", (pid,), one=True) or abort(404)
+
+
+@bp.route("/prospects", methods=["GET", "POST"])
+def prospects():
+    if request.method == "POST":
+        f = request.form
+        if f.get("action") == "radar":
+            if not f.get("thesis", "").strip():
+                flash("Describe what you are looking for.", "error")
+                return redirect(request.path)
+            try:
+                n, model, web = prospecting.radar(f["thesis"], _int(f.get("n"), 8, 3, 15), f.get("provider") or None)
+                flash(f"{n} candidate companies added as 'Suggested' ({model}{'' if web else ', no web access'}).", "ok")
+            except ai.AIError as e:
+                flash(str(e), "error")
+            return redirect(request.path)
+        if not f.get("company", "").strip():
+            flash("Company name is required.", "error")
+            return redirect(request.path)
+        pid = db.insert("prospects", {k: f.get(k, "").strip() for k in ("company", "sector", "market", "website", "why",
+                                                                          "material")} |
+                        {"stage": "Identified", "created_at": db.now(), "updated_at": db.now()})
+        if f.get("research"):
+            prospecting.start(pid, f.get("provider") or None)
+        return redirect(url_for("v.prospect", pid=pid))
+    rows = db.query("SELECT * FROM prospects ORDER BY COALESCE(fit_score, -1) DESC, updated_at DESC")
+    board = {s: [p for p in rows if p["stage"] == s] for s in prospecting.STAGES}
+    return render_template("prospects.html", board=board, stages=prospecting.STAGES, total=len(rows))
+
+
+@bp.route("/prospects/<int:pid>", methods=["GET", "POST"])
+def prospect(pid):
+    p = get_prospect(pid)
+    if request.method == "POST":
+        f = request.form
+        act = f.get("action")
+        if act == "research":
+            if f.get("material") is not None:
+                db.update("prospects", pid, {"material": f.get("material", "")})
+            prospecting.start(pid, f.get("provider") or None)
+        elif act == "update":
+            db.update("prospects", pid, {k: f.get(k, p[k]) for k in ("company", "sector", "market", "website", "stage",
+                                                                   "notes")} | {"updated_at": db.now()})
+        elif act == "deck":
+            slides = decks.from_prospect(p)
+            deck_id = db.insert("decks", {"title": f"{p['company']} × Vestige", "subtitle": "", "audience": "prospect",
+                                          "slides": slides, "model": p["model"], "created_at": db.now(),
+                                          "updated_at": db.now()})
+            db.update("prospects", pid, {"deck_id": deck_id})
+            return redirect(url_for("v.deck_edit", deck_id=deck_id))
+        elif act == "convert":
+            brand_id = prospecting.to_brand(p)
+            flash(f"{p['company']} is now a client engagement. Import their CRM to run the diagnostic.", "ok")
+            return redirect(url_for("v.diagnostics", brand_id=brand_id))
+        elif act == "delete":
+            db.delete("prospects", pid)
+            return redirect(url_for("v.prospects"))
+        return redirect(url_for("v.prospect", pid=pid))
+    return render_template("prospect.html", p=p, stages=prospecting.STAGES, run_stages=prospecting.RUN_STAGES)
+
+
+@bp.route("/prospects/<int:pid>/report")
+def prospect_report(pid):
+    return render_template("prospect_report.html", p=get_prospect(pid))

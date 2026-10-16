@@ -127,9 +127,62 @@ CREATE TABLE IF NOT EXISTS saved_queries (
     created_at TEXT
 );
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT);
+-- One full run of the engagement diagnostic pipeline for a maison:
+-- segmentation -> archetypes -> cross-examination -> strategy -> report/deck.
+CREATE TABLE IF NOT EXISTS diagnostics (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    brand_id INTEGER NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
+    status TEXT DEFAULT 'queued',
+    stage TEXT DEFAULT '',
+    error TEXT DEFAULT '',
+    brief TEXT DEFAULT '',
+    segmentation TEXT DEFAULT '{}',
+    archetypes TEXT DEFAULT '{}',
+    crossexam TEXT DEFAULT '{}',
+    strategy TEXT DEFAULT '{}',
+    model TEXT DEFAULT '',
+    deck_id INTEGER,
+    created_at TEXT, finished_at TEXT
+);
+-- Proactive mode: companies Vestige researches before they are clients.
+CREATE TABLE IF NOT EXISTS prospects (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    company TEXT NOT NULL,
+    sector TEXT DEFAULT '',
+    market TEXT DEFAULT '',
+    website TEXT DEFAULT '',
+    stage TEXT DEFAULT 'Identified',
+    fit_score INTEGER,
+    why TEXT DEFAULT '',
+    material TEXT DEFAULT '',
+    notes TEXT DEFAULT '',
+    run_status TEXT DEFAULT 'idle',
+    run_stage TEXT DEFAULT '',
+    error TEXT DEFAULT '',
+    dossier TEXT DEFAULT '{}',
+    pitch TEXT DEFAULT '{}',
+    sources TEXT DEFAULT '[]',
+    used_web INTEGER DEFAULT 0,
+    model TEXT DEFAULT '',
+    deck_id INTEGER,
+    brand_id INTEGER REFERENCES brands(id) ON DELETE SET NULL,
+    created_at TEXT, updated_at TEXT
+);
 """
 
-JSON_FIELDS = {"interests", "affinities", "social_circle", "payload", "slides", "mapping"}
+# Columns added after the first release; applied to existing databases on start.
+MIGRATIONS = {
+    "brands": {"current_strategy": "TEXT DEFAULT ''", "resource_allocation": "TEXT DEFAULT ''"},
+    "competitors": {"actions": "TEXT DEFAULT ''"},
+    "clients": {"purchase_categories": "TEXT DEFAULT '[]'", "purchase_count": "INTEGER DEFAULT 0",
+                "first_purchase": "TEXT DEFAULT ''", "last_purchase": "TEXT DEFAULT ''",
+                "avg_ticket": "REAL DEFAULT 0", "segment": "INTEGER"},
+}
+
+JSON_FIELDS = {"interests", "affinities", "social_circle", "payload", "slides", "mapping", "purchase_categories",
+               "segmentation", "archetypes", "crossexam", "strategy", "dossier", "pitch", "sources"}
+DICT_FIELDS = {"affinities", "payload", "mapping", "segmentation", "archetypes", "crossexam", "strategy", "dossier",
+               "pitch"}
 
 
 def now():
@@ -157,8 +210,14 @@ def close_db(_exc=None):
 
 
 def init_db():
-    get_db().executescript(SCHEMA)
-    get_db().commit()
+    conn = get_db()
+    conn.executescript(SCHEMA)
+    for table, cols in MIGRATIONS.items():
+        existing = {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
+        for col, ddl in cols.items():
+            if col not in existing:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {ddl}")
+    conn.commit()
 
 
 def _decode(row):
@@ -167,9 +226,9 @@ def _decode(row):
     d = dict(row)
     for k in JSON_FIELDS & d.keys():
         try:
-            d[k] = json.loads(d[k] or ("{}" if k in ("affinities", "payload", "mapping") else "[]"))
+            d[k] = json.loads(d[k] or ("{}" if k in DICT_FIELDS else "[]"))
         except (TypeError, ValueError):
-            d[k] = {} if k in ("affinities", "payload", "mapping") else []
+            d[k] = {} if k in DICT_FIELDS else []
     return d
 
 

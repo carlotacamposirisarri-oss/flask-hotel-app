@@ -25,7 +25,7 @@
     <div class="cc-body">
       <h3>{{ c.name }}</h3>
       <p class="muted">{{ c.city }}{{ ', ' if c.city and c.country }}{{ c.country }} · {{ c.tier }}</p>
-      <p class="arch">{{ c.archetype or 'Archetype to define' }}</p>
+      <p class="cc-arch">{{ c.archetype or 'Archetype to define' }}</p>
       <div class="tags">{% for i in c.interests[:4] %}<span>{{ i }}</span>{% endfor %}</div>
     </div>
     <div class="cc-side">

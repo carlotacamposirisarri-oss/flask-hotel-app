@@ -62,9 +62,11 @@
       const listText = (s) => {
         if (s.type === "metrics") return (s.metrics || []).map((m) => `${m.label} | ${m.value}`).join("\n");
         if (s.type === "bars") return (s.bars || []).map((b) => `${b.label} | ${b.value}`).join("\n");
+        if (s.type === "matrix") return [`# ${(s.columns || []).join(" | ")}`, ...(s.rows || []).map((r) => [r.label, ...(r.values || [])].join(" | "))].join("\n");
         return (s.bullets || []).join("\n");
       };
-      const listHint = (t) => (t === "metrics" ? "One per line: label | value" : t === "bars" ? "One per line: label | number" : "Bullets, one per line");
+      const listHint = (t) => (t === "metrics" ? "One per line: label | value" : t === "bars" ? "One per line: label | number"
+        : t === "matrix" ? "First line: # Column A | Column B; then: row label | 80 | 40" : "Bullets, one per line");
 
       function render() {
         root.innerHTML = slides.map((s, i) => `
@@ -91,7 +93,11 @@
           const s = { type, title: get("title"), subtitle: get("subtitle"), body: get("body") };
           if (type === "metrics") s.metrics = lines.map((l) => { const [label, value] = l.split("|"); return { label: (label || "").trim(), value: (value || "").trim() }; });
           else if (type === "bars") s.bars = lines.map((l) => { const [label, value] = l.split("|"); return { label: (label || "").trim(), value: parseFloat(value) || 0 }; });
-          else s.bullets = lines;
+          else if (type === "matrix") {
+            const head = lines.find((l) => l.startsWith("#"));
+            s.columns = head ? head.slice(1).split("|").map((x) => x.trim()) : [];
+            s.rows = lines.filter((l) => !l.startsWith("#")).map((l) => { const [label, ...vals] = l.split("|").map((x) => x.trim()); return { label, values: vals.map((v) => parseFloat(v) || 0) }; });
+          } else s.bullets = lines;
           return s;
         });
       }

@@ -11,7 +11,9 @@ import random
 import sys
 from datetime import date, timedelta
 
-from . import create_app, db
+from . import create_app, db, segment
+from .seed_personas import (COMPETITOR_ACTIONS, DEMO_ARCHETYPES, DEMO_PROSPECT, DEMO_STRATEGY, PERSONAS,
+                            demo_crossexam, demo_strategy)
 
 BRANDS = [
     {
@@ -60,22 +62,10 @@ FIRST = ["Isabelle", "Hiroshi", "Leila", "Alessandro", "Margaux", "Omar", "Chen"
 LAST = ["Delacroix-Brun", "Tanaka", "Al-Mansouri", "Ferrante", "de Villeneuve", "Haddad", "Liang", "Marchetti", "Lindqvist",
         "Okafor", "Whitmore", "Al-Thani", "Rossi", "Mori", "Ashford", "Castellanos", "Wong", "Harrington", "Benali", "Sørensen",
         "Visconti", "Farouk", "de la Roche", "Berg"]
-PLACES = [("France", "Paris"), ("Japan", "Tokyo"), ("UAE", "Dubai"), ("Italy", "Milan"), ("Switzerland", "Geneva"),
-          ("Saudi Arabia", "Riyadh"), ("China", "Shanghai"), ("UK", "London"), ("USA", "New York"), ("Singapore", "Singapore"),
-          ("Qatar", "Doha"), ("Monaco", "Monaco"), ("USA", "Los Angeles"), ("Hong Kong", "Hong Kong")]
 CIRCLES = ["Fondation Beyeler patrons", "Yacht Club de Monaco", "Art Basel collectors circle", "Polo Club Saint-Tropez",
            "Serpentine Council", "Opéra de Paris AROP", "Geneva Watch Club", "YPO", "Glyndebourne members", "Louvre Abu Dhabi friends"]
-PURCHASES = ["Riva Aquariva", "Patek Philippe Nautilus", "Hermès Kelly collection", "Château Margaux en primeur",
-             "Ferrari SF90", "Aman residences", "Contemporary African art", "Hasselblad archive prints", "Bugatti Chiron",
-             "Loro Piana bespoke", "Racehorse share", "Private island villa"]
-SIGNALS = ["Attended 3 salons this year, bought twice", "No visit in 14 months after a strong 2024",
-           "Engages with archive stories, ignores product launches", "Asked about apprenticeships for daughter",
-           "Bought gift pieces only — never for self", "Responds within minutes to advisor, prefers WhatsApp",
-           "Cancelled last two invitations", "Referred two friends in 2025", "Interested in bespoke commissions",
-           "Follows competitor's Biennale programme closely"]
 CLUSTERS = ["Arts", "Travel", "Gastronomy", "Philanthropy", "Motorsport", "Real Estate", "Collectibles", "Wine & Spirits",
             "Wellness", "Sailing", "Equestrian", "Music", "Design & Architecture", "Family"]
-PHASES = ["Discovery", "Courtship", "Engaged", "Engaged", "Loyal", "Loyal", "Ambassador", "At risk", "Dormant"]
 
 ITEMS = {
     "Maison Aurèle": [
@@ -139,38 +129,51 @@ def seed(reset=False):
     rng = random.Random(7)
     created = (date.today() - timedelta(days=200)).isoformat()
     for spec in BRANDS:
-        brand_id = db.insert("brands", {**spec, "created_at": created, "updated_at": db.now()})
+        brand_id = db.insert("brands", {**spec, **DEMO_STRATEGY[spec["name"]], "created_at": created, "updated_at": db.now()})
         for name, pos, tiers, signals, x, y in COMPETITORS[spec["name"]]:
             db.insert("competitors", {"brand_id": brand_id, "name": name, "positioning": pos, "client_tiers": tiers,
-                                      "signals": signals, "axis_x": x, "axis_y": y, "created_at": db.now()})
-        archetypes = [a.split(":")[0] for a in spec["archetypes"].split("\n")]
-        names = rng.sample([(f, l) for f in FIRST for l in LAST], 14)
-        for first, last in names:
-            country, city = rng.choice(PLACES)
-            interests = rng.sample(CLUSTERS, rng.randint(2, 5))
-            arch = rng.choice(archetypes)
-            phase = rng.choice(PHASES)
-            if arch.startswith("The Next-Gen") and rng.random() < .7:
-                phase = rng.choice(["At risk", "Dormant"])
-            cid = db.insert("clients", {
-                "brand_id": brand_id, "name": f"{first} {last}", "email": f"{first.lower()}.{last.split()[0].lower()}@example.com",
-                "country": country, "city": city, "tier": rng.choice(["Platinum", "VVIC", "Gold", "Top 100"]),
-                "archetype": arch, "phase": phase,
-                "engagement_score": rng.randint(15, 45) if phase in ("At risk", "Dormant") else rng.randint(45, 96),
-                "lifetime_value": rng.choice([85, 120, 240, 380, 650, 1200, 2400]) * 1000,
-                "interests": interests, "affinities": {i: rng.randint(40, 98) for i in interests},
-                "social_circle": rng.sample(CIRCLES, rng.randint(1, 3)),
-                "cross_purchases": ", ".join(rng.sample(PURCHASES, rng.randint(1, 3))),
-                "behavioral_signals": rng.choice(SIGNALS), "social_footprint": rng.choice(
-                    ["Private Instagram, 400 followers", "No public social presence", "Active on LinkedIn, speaks at conferences",
-                     "Featured in Tatler 2025", "Family foundation website only"]),
-                "notes": "Demo client (fictional).", "source": "demo", "created_at": created, "updated_at": db.now()})
-            for k in range(rng.randint(1, 4)):
-                db.insert("client_events", {"client_id": cid, "date": (date.today() - timedelta(days=rng.randint(5, 400))).isoformat(),
-                                            "kind": rng.choice(["Purchase", "Visit", "Event", "Gift", "Message"]),
-                                            "description": rng.choice(["Private viewing at the salon", "Anniversary gift for spouse",
-                                                                       "Attended dinner in Geneva", "Thank-you note sent",
-                                                                       "Bespoke enquiry", "Repair & service"])})
+                                      "signals": signals, "actions": COMPETITOR_ACTIONS.get(name, ""), "axis_x": x,
+                                      "axis_y": y, "created_at": db.now()})
+        brand_clients = []
+        for persona in PERSONAS[spec["name"]]:
+            for _ in range(persona["weight"]):
+                first, last = rng.choice(FIRST), rng.choice(LAST)
+                country, city = rng.choice(persona["places"])
+                interests = rng.sample(persona["interests"], rng.randint(2, len(persona["interests"])))
+                if rng.random() < .35:
+                    extra = rng.choice(CLUSTERS)
+                    if extra not in interests:
+                        interests.append(extra)
+                phase = rng.choice(persona["phases"])
+                orders = rng.randint(*persona["orders"])
+                ltv = rng.randint(*persona["ltv"]) * 1000
+                last_days = rng.randint(*persona["recency"])
+                cid = db.insert("clients", {
+                    "brand_id": brand_id, "name": f"{first} {last}",
+                    "email": f"{first.lower()}.{last.split()[0].lower()}.{rng.randint(10, 99)}@example.com",
+                    "country": country, "city": city, "tier": rng.choice(["Platinum", "VVIC", "Gold", "Top 100"]),
+                    "archetype": "", "phase": phase,
+                    "engagement_score": rng.randint(15, 45) if phase in ("At risk", "Dormant") else rng.randint(50, 96),
+                    "lifetime_value": ltv, "purchase_count": orders, "avg_ticket": round(ltv / orders),
+                    "last_purchase": (date.today() - timedelta(days=last_days)).isoformat(),
+                    "first_purchase": (date.today() - timedelta(days=last_days + rng.randint(200, 3000))).isoformat(),
+                    "purchase_categories": rng.sample(persona["cats"], rng.randint(1, len(persona["cats"]))),
+                    "interests": interests, "affinities": {i: rng.randint(40, 98) for i in interests},
+                    "social_circle": rng.sample(CIRCLES, rng.randint(1, 3)),
+                    "cross_purchases": ", ".join(rng.sample(persona["cross"], rng.randint(1, len(persona["cross"])))),
+                    "behavioral_signals": rng.choice(persona["signals"]), "social_footprint": rng.choice(
+                        ["Private Instagram, 400 followers", "No public social presence", "Active on LinkedIn",
+                         "Featured in Tatler 2025", "Family foundation website only"]),
+                    "notes": "Demo client (fictional).", "source": "demo", "created_at": created, "updated_at": db.now()})
+                brand_clients.append((cid, persona["key"]))
+                for _k in range(rng.randint(1, 3)):
+                    db.insert("client_events", {"client_id": cid, "date": (date.today() - timedelta(days=rng.randint(5, 400))).isoformat(),
+                                                "kind": rng.choice(["Purchase", "Visit", "Event", "Gift", "Message"]),
+                                                "description": rng.choice(["Private viewing at the salon", "Anniversary gift for spouse",
+                                                                           "Attended dinner in Geneva", "Thank-you note sent",
+                                                                           "Bespoke enquiry", "Repair & service"])})
+        if spec["name"] == "Maison Aurèle":
+            _demo_diagnostic(brand_id, dict(brand_clients))
         for kind, title, summary, urg, imp, month, payload in ITEMS[spec["name"]]:
             db.insert("items", {"brand_id": brand_id, "scope": "brand", "kind": kind, "title": title, "summary": summary,
                                 "urgency": urg, "impact": imp, "month": month, "payload": payload, "model": "demo-seed",
@@ -185,7 +188,38 @@ def seed(reset=False):
                         "due": f"{date.today().year + 1}-06-30", "notes": "Independents first.", "created_at": db.now(), "updated_at": db.now()})
     db.insert("goals", {"title": "Publish the first Vestige Luxury Client Intelligence Report", "metric": "reports",
                         "target": 1, "current": 0, "due": f"{date.today().year + 1}-03-31", "created_at": db.now(), "updated_at": db.now()})
-    print("Demo portfolio loaded: 2 fictional maisons, 28 clients, competitors, work items, KPIs and goals.")
+    db.insert("prospects", {k: DEMO_PROSPECT[k] for k in ("company", "sector", "market", "website", "why", "dossier", "pitch")} |
+              {"stage": "Researched", "fit_score": DEMO_PROSPECT["pitch"]["fit_score"], "run_status": "done",
+               "model": "demo-seed (fictional example)", "created_at": db.now(), "updated_at": db.now()})
+    print("Demo portfolio loaded: 2 fictional maisons with behavioural CRM data, a demo diagnostic, a demo lead, "
+          "competitors, KPIs and goals.")
+
+
+def _demo_diagnostic(brand_id, persona_of):
+    """A complete example diagnostic: real segmentation of the demo CRM, hand-written analysis."""
+    clients = db.query("SELECT * FROM clients WHERE brand_id = ?", (brand_id,))
+    seg = segment.segment(clients)
+    names, archetypes = {}, []
+    for sg in seg["segments"]:
+        members = [persona_of[int(cid)] for cid, sid in seg["assignments"].items() if sid == sg["id"]]
+        key = max(set(members), key=members.count)
+        base = dict(DEMO_ARCHETYPES[key])
+        if base["name"] in names.values():  # two segments of the same persona
+            base["name"] += f" ({sg['id'] + 1})"
+        names.setdefault(key, base["name"])
+        archetypes.append({"segment_id": sg["id"], **base})
+    conn = db.get_db()
+    by_seg = {a["segment_id"]: a["name"] for a in archetypes}
+    for cid, sid in seg["assignments"].items():
+        conn.execute("UPDATE clients SET segment = ?, archetype = ? WHERE id = ?", (sid, by_seg[sid], int(cid)))
+    conn.commit()
+    db.insert("diagnostics", {
+        "brand_id": brand_id, "status": "done", "stage": "done", "brief": "Demo run (fictional data).",
+        "segmentation": seg, "model": "demo-seed (fictional example)",
+        "archetypes": {"archetypes": archetypes, "segmentation_reading": "Value is concentrated in two archetypes that the "
+                       "current strategy barely serves, while the largest group by headcount is a leak of one-time buyers."},
+        "crossexam": demo_crossexam(names), "strategy": demo_strategy(names),
+        "created_at": db.now(), "finished_at": db.now()})
 
 
 if __name__ == "__main__":

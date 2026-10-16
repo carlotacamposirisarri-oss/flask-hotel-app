@@ -26,6 +26,11 @@
     <label>Primary model<select name="primary"><option value="claude" {{ 'selected' if ai_status.primary == 'claude' }}>Claude</option><option value="astra" {{ 'selected' if ai_status.primary == 'astra' }}>Chat Astra</option></select></label>
     <label class="check"><input type="checkbox" name="fallback" {{ 'checked' if ai_status.fallback }}> Fall back to the other model if the primary fails</label>
   </fieldset>
+  <fieldset>
+    <legend>Vestige's offer</legend>
+    <p class="hint">Used by the prospecting engine to judge fit and write pitches. Keep it precise: services, deliverables, what makes Vestige different.</p>
+    <label>Offer<textarea name="vestige_offer" rows="6">{{ offer }}</textarea></label>
+  </fieldset>
   <button class="btn">Save settings</button>
 </form>
 

@@ -7,6 +7,13 @@
   <p class="lede">Every maison you serve, every client you map, every move that grows the practice — in one place.</p>
 </header>
 
+<div class="reactive-proactive">
+  <a class="rp" href="{{ url_for('v.prospects') }}"><span class="eyebrow">Proactive</span><h3>Find & pitch new maisons</h3>
+    <p>Scan the market for companies with the problem Vestige solves → researched dossier → opportunity report, pitch deck, outreach.</p></a>
+  <a class="rp" href="{{ url_for('v.brand', brand_id=cards[0].id) if cards else url_for('v.brand_form') }}"><span class="eyebrow">Reactive</span><h3>Serve a client</h3>
+    <p>Import their CRM → engagement diagnostic: archetypes, cross-examination, reallocation, experiential strategy → report & deck.</p></a>
+</div>
+
 <section class="tiles">
   <div class="tile"><b>{{ kpis.engagements }}</b><span>Active engagements</span></div>
   <div class="tile"><b>{{ kpis.clients }}</b><span>Clients mapped</span></div>

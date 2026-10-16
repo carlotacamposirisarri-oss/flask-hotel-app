@@ -33,6 +33,7 @@
       <label>Positioning<textarea name="positioning" rows="2">{{ edit.positioning if edit }}</textarea></label>
       <label>Client tiers they serve<input name="client_tiers" value="{{ edit.client_tiers if edit else '' }}"></label>
       <label>Public signals <small>(boutiques, events, collaborations, digital)</small><textarea name="signals" rows="3">{{ edit.signals if edit }}</textarea></label>
+      <label>Recent actions <small>(events, programmes, collaborations, launches, communities — with dates)</small><textarea name="actions" rows="3">{{ edit.actions if edit }}</textarea></label>
       <label>Notes<textarea name="notes" rows="2">{{ edit.notes if edit }}</textarea></label>
       <div class="cols"><label>X position<input type="range" name="axis_x" min="0" max="100" value="{{ edit.axis_x if edit else 50 }}"></label><label>Y position<input type="range" name="axis_y" min="0" max="100" value="{{ edit.axis_y if edit else 50 }}"></label></div>
       <button class="btn">{{ 'Save' if edit else 'Add competitor' }}</button>
@@ -40,8 +41,8 @@
   </section>
 </div>
 <table class="table">
-  <thead><tr><th>Competitor</th><th>Positioning</th><th>Tiers</th><th>Signals</th><th></th></tr></thead>
-  <tbody>{% for c in comps %}<tr><td><b>{{ c.name }}</b></td><td>{{ c.positioning }}</td><td>{{ c.client_tiers }}</td><td>{{ c.signals|truncate(90) }}</td>
+  <thead><tr><th>Competitor</th><th>Positioning</th><th>Tiers</th><th>Recent actions</th><th></th></tr></thead>
+  <tbody>{% for c in comps %}<tr><td><b>{{ c.name }}</b></td><td>{{ c.positioning }}</td><td>{{ c.client_tiers }}</td><td>{{ (c.actions or c.signals)|truncate(110) }}</td>
   <td class="nowrap"><a class="link" href="?edit={{ c.id }}">Edit</a>
   <form method="post" action="{{ url_for('v.competitor_delete', brand_id=brand.id, comp_id=c.id) }}" style="display:inline" onsubmit="return confirm('Remove?')"><button class="link danger">Remove</button></form></td></tr>
   {% else %}<tr><td colspan="5" class="empty">No competitors defined yet.</td></tr>{% endfor %}</tbody>

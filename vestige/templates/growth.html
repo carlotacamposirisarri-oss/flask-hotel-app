@@ -53,6 +53,12 @@
   </section>
 </div>
 
+<section class="panel"><h3>Proactive pipeline</h3>
+  {% if pipeline %}<div class="bars">{% for r in pipeline %}<div class="bar"><span class="k">{{ r.stage }}</span><span class="track"><i style="width: {{ [r.n * 10, 100]|min }}%"></i></span><span class="v">{{ r.n }}{% if r.fit %} · fit {{ r.fit|round|int }}{% endif %}</span></div>{% endfor %}</div>
+  {% else %}<p class="empty">No prospects yet — <a href="{{ url_for('v.prospects') }}">scan the market</a>.</p>{% endif %}
+</section>
+
+{{ block('vestige_ip', groups.vestige_ip, None, "What the patterns across your clients and prospects say about Vestige's IP, services and direction.") }}
 {{ block('growth_plan', groups.growth_plan, None, 'Which sectors to target, which services to package, partnerships, thought leadership, pricing and geography — sequenced.') }}
 {{ block('radar', groups.radar, None, 'New business opportunities detected in the patterns of your own engagements.') }}
 {{ block('health_check', groups.health_check, None, "An honest audit of how Vestige itself operates and positions.") }}

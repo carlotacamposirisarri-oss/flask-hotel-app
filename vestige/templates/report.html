@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ brand.name }} — Engagement Diagnostic</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='vestige.css') }}">
+<style>:root{--accent: {{ brand.accent_color }};}</style>
+</head>
+<body class="report-doc">
+<div class="present-bar"><a href="{{ url_for('v.diagnostic_view', brand_id=brand.id, diag_id=d.id) }}">← Back</a><button onclick="window.print()">Print / Save as PDF</button></div>
+<article class="report-paper">
+  <header class="report-cover">
+    <p class="eyebrow">Vestige · Intelligence report</p>
+    <h1>{{ brand.name }}</h1>
+    <h2>Engagement Diagnostic</h2>
+    <p class="lede">{{ d.strategy.headline }}</p>
+    <p class="muted">{{ d.finished_at[:10] if d.finished_at else d.created_at[:10] }} · Confidential · Prepared for {{ brand.name }}</p>
+  </header>
+  {% include "partials/report_body.html" %}
+  <footer class="report-foot">Vestige · vestigeloyalty.com — Analysis generated with {{ d.model }} and reviewed by Vestige.</footer>
+</article>
+</body></html>

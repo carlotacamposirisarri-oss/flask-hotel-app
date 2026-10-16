@@ -15,7 +15,13 @@
   <section class="panel"><h3>Lifecycle phases</h3>{{ bars(x.phases) }}</section>
   <section class="panel"><h3>Client geography</h3>{{ bars(x.countries) }}</section>
 </div>
-<section class="block"><div class="block-h"><h2>Retention patterns by archetype</h2></div>
+<section class="block"><div class="block-h"><div><h2>Archetype library</h2><p class="lede">The archetypes found by each maison's latest diagnostic, side by side. This is the raw material for a proprietary Vestige archetype framework.</p></div></div>
+<table class="table"><thead><tr><th>Maison</th><th>Archetype</th><th>Essence</th><th>Clients</th><th>Value</th><th>At risk</th><th>Top passions</th></tr></thead><tbody>
+{% for a in library %}<tr><td>{{ a.maison }}</td><td><b>{{ a.name }}</b></td><td>{{ a.essence }}</td><td>{{ a.size_pct }}%</td><td>{{ a.value_pct }}%</td><td>{{ a.at_risk_pct }}%</td><td>{{ a.interests }}</td></tr>
+{% else %}<tr><td colspan="7" class="empty">Run an engagement diagnostic on a maison to start the library.</td></tr>{% endfor %}
+</tbody></table></section>
+
+<section class="block"><div class="block-h"><h2>Retention patterns by archetype (CRM labels)</h2></div>
 <table class="table"><thead><tr><th>Archetype</th><th>Clients</th><th>Avg engagement</th><th>Loyal / ambassador</th><th>At risk / dormant</th></tr></thead><tbody>
 {% for r in x.retention %}<tr><td><b>{{ r.archetype }}</b></td><td>{{ r.clients }}</td><td>{{ r.avg_engagement }}</td>
 <td><span class="meter"><i style="width: {{ r.loyal_pct }}%"></i></span> {{ r.loyal_pct }}%</td>

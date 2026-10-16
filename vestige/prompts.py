@@ -48,7 +48,7 @@ KINDS = {
         "input": "Optional focus (e.g. 'Q4 gifting season', 'Middle East clients')",
     },
     "prospect": {
-        "label": "Prospecting analysis", "plural": "Prospecting", "scope": "brand", "context": "brand", "count": 1,
+        "label": "Analyst answer", "plural": "Ask the analyst", "scope": "brand", "context": "brand", "count": 1,
         "instruction": "Work autonomously on the strategic question below. Return a single structured analysis.",
         "fields": {
             "analysis": "the reasoning, 2-4 short paragraphs",
@@ -208,7 +208,8 @@ KINDS = {
     # ----------------------------------------------------------- growth ----
     "growth_plan": {
         "label": "Growth move", "plural": "Growth action plan", "scope": "growth", "context": "growth", "count": 8,
-        "instruction": "Analyse the body of work across engagements and Vestige's KPIs and goals. Produce a "
+        "instruction": "Analyse the body of work across engagements and diagnostics, the proactive prospect pipeline, "
+                       "and Vestige's KPIs and goals. Produce a "
                        "prioritised, step-by-step growth action plan for scaling Vestige, covering: sectors to target "
                        "next (where intelligence shows the biggest retention gaps), services to package (repeated "
                        "client needs), partnership/referral networks, thought-leadership and intelligence-report "
@@ -246,6 +247,23 @@ KINDS = {
             "assessment": "the honest assessment",
             "rating": "integer 1-5 (5 = excellent)",
             "recommendation": "what to change",
+        },
+    },
+    "vestige_ip": {
+        "label": "IP & service move", "plural": "Vestige IP & service optimisation", "scope": "growth",
+        "context": "growth", "count": 6,
+        "instruction": "Using the patterns across ALL client diagnostics (archetypes, weaknesses, opportunities, "
+                       "reallocations) and the proactive pipeline (problem signals seen in prospects), recommend how "
+                       "Vestige should strengthen its intellectual property and its service: a proprietary archetype "
+                       "framework that generalises across maisons, productised service modules and price points, "
+                       "methodology and data improvements, benchmarks and reports Vestige can own and publish, and "
+                       "the company direction these patterns point to.",
+        "fields": {
+            "type": "IP asset | service module | methodology | pricing | direction",
+            "pattern_evidence": "the cross-client or pipeline pattern this is built on",
+            "proposal": "what to build or change",
+            "how_to_build": "list of concrete steps",
+            "commercial_effect": "effect on revenue, margin, differentiation or pipeline",
         },
     },
     "course_correction": {

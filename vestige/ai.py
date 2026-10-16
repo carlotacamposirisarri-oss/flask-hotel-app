@@ -200,3 +200,72 @@ def parse_json(text):
 def complete_json(system, prompt, provider=None, max_tokens=16000):
     text, model = complete(system, prompt, provider, max_tokens)
     return parse_json(text), model
+
+
+# ------------------------------------------------------ web research (Claude) ----
+
+WEB_TOOLS = [
+    {"type": "web_search_20260209", "name": "web_search", "max_uses": 15},
+    {"type": "web_fetch_20260209", "name": "web_fetch", "max_uses": 8},
+]
+
+
+def _sources(content):
+    seen, out = set(), []
+    for block in content:
+        btype = getattr(block, "type", "")
+        items = []
+        if btype == "web_search_tool_result" and isinstance(getattr(block, "content", None), list):
+            items = [(getattr(r, "url", ""), getattr(r, "title", "")) for r in block.content]
+        elif btype == "text":
+            items = [(getattr(c, "url", ""), getattr(c, "title", "")) for c in (getattr(block, "citations", None) or [])]
+        for url, title in items:
+            if url and url not in seen:
+                seen.add(url)
+                out.append({"url": url, "title": title or url})
+    return out
+
+
+def research_json(system, prompt, provider=None, max_tokens=32000):
+    """Claude with web search/fetch; returns (data, model, sources, used_web).
+
+    Falls back to a no-web completion (e.g. Chat Astra) when Claude is unavailable,
+    flagged via used_web=False so the UI can say the dossier is not web-verified.
+    """
+    import anthropic
+
+    cfg = config()
+    key = _secret("anthropic_api_key")
+    if provider == "astra" or not key:
+        data, model = complete_json(system, prompt + "\n\n(No web access in this run: rely only on the material "
+                                    "provided and mark every unverified statement as such.)", provider)
+        return data, model, [], False
+    client = anthropic.Anthropic(api_key=key, timeout=900.0)
+    messages = [{"role": "user", "content": prompt}]
+    content = []
+    try:
+        for _ in range(6):  # server tools may pause a long turn; continue it
+            with client.beta.messages.stream(
+                model=cfg["claude_model"], max_tokens=max_tokens, system=system, messages=messages,
+                tools=WEB_TOOLS, output_config={"effort": cfg["claude_effort"]},
+                betas=["server-side-fallback-2026-07-01"], fallbacks="default",
+            ) as stream:
+                resp = stream.get_final_message()
+            content.extend(resp.content)
+            if resp.stop_reason != "pause_turn":
+                break
+            messages = messages + [{"role": "assistant", "content": resp.content}]
+    except anthropic.AuthenticationError:
+        raise AIError("Claude rejected the API key. Check it in Settings.")
+    except anthropic.RateLimitError:
+        raise AIError("Claude rate limit reached — try again in a minute.")
+    except anthropic.APIStatusError as e:
+        raise AIError(f"Claude API error ({e.status_code}): {e.message}")
+    except anthropic.APIConnectionError:
+        raise AIError("Could not reach the Claude API (network).")
+    if resp.stop_reason == "refusal":
+        raise AIError("Claude declined this research request. Rephrase and retry.")
+    if resp.stop_reason == "max_tokens":
+        raise AIError("The research output was cut off. Narrow the scope and retry.")
+    text = "".join(b.text for b in resp.content if getattr(b, "type", "") == "text")
+    return parse_json(text), resp.model, _sources(content), True

@@ -5,7 +5,7 @@ from datetime import date
 from . import ai, analytics, db
 from .prompts import DECK_PROMPT, KINDS, VESTIGE_SYSTEM
 
-SLIDE_TYPES = ["cover", "section", "text", "metrics", "bars", "quote", "closing"]
+SLIDE_TYPES = ["cover", "section", "text", "metrics", "bars", "matrix", "quote", "closing"]
 
 
 def _bullets_from_payload(kind, payload, limit=6):
@@ -65,6 +65,101 @@ def assemble(title, brand, items, audience):
     slides.append({"type": "closing", "title": "Next steps", "bullets": [
         "Validate priorities together", "Assign owners and timing", "Activate the first initiative",
         "Review signals and impact in 90 days"]})
+    return slides
+
+
+def from_diagnostic(brand, d):
+    """Deck from a completed Engagement Diagnostic — numbers come from the data, words from the analysis."""
+    seg, arch, cx, st = d["segmentation"], d["archetypes"], d["crossexam"], d["strategy"]
+    by_id = {s["id"]: s for s in seg.get("segments", [])}
+    archs = arch.get("archetypes", [])
+    name = lambda a: a.get("name") or f"Segment {a.get('segment_id')}"  # noqa: E731
+    q = seg.get("quality", {})
+    top = max(seg.get("segments", []), key=lambda s: s["value_pct"], default={})
+    risk_value = sum(s["value"] * s["at_risk_pct"] / 100 for s in seg.get("segments", []))
+    total_value = sum(s["value"] for s in seg.get("segments", [])) or 1
+    slides = [
+        {"type": "cover", "title": f"{brand['name']} — Engagement Diagnostic",
+         "subtitle": f"Prepared by Vestige · {date.today():%B %Y}"},
+        {"type": "quote", "title": "The thesis", "body": st.get("headline", "")},
+        {"type": "text", "title": "Executive summary", "bullets": st.get("executive_summary", [])},
+        {"type": "metrics", "title": "The client base, read through behaviour", "metrics": [
+            {"label": "Clients analysed", "value": str(q.get("clients", ""))},
+            {"label": "Behavioural archetypes", "value": str(q.get("k", ""))},
+            {"label": f"Value held by {name(next((a for a in archs if a.get('segment_id') == top.get('id')), {'segment_id': top.get('id')}))}",
+             "value": f"{top.get('value_pct', 0)}%"},
+            {"label": "Value in at-risk relationships", "value": f"{round(100 * risk_value / total_value)}%"},
+        ]},
+        {"type": "section", "title": "Who your clients really are", "subtitle": arch.get("segmentation_reading", "")},
+        {"type": "bars", "title": "Share of client value by archetype",
+         "bars": [{"label": name(a), "value": by_id.get(a.get("segment_id"), {}).get("value_pct", 0)} for a in archs]},
+    ]
+    for a in archs:
+        s = by_id.get(a.get("segment_id"), {})
+        slides.append({"type": "text", "title": name(a),
+                       "body": f"{a.get('essence', '')}\n\n{s.get('size_pct', '?')}% of clients · {s.get('value_pct', '?')}% of value · "
+                               f"{s.get('at_risk_pct', '?')}% at risk\n\n{a.get('relationship_to_brand', '')}",
+                       "bullets": (a.get("defining_behaviours") or [])[:4] + (a.get("emotional_drivers") or [])[:2]})
+    matrix = cx.get("matrix", [])
+    slides += [
+        {"type": "section", "title": "The diagnosis", "subtitle": cx.get("synthesis", "")},
+        {"type": "matrix", "title": "Identity, current strategy and competitive pressure",
+         "columns": ["Identity fit", "Strategy coverage", "Competitor pressure"],
+         "rows": [{"label": m.get("archetype", ""), "values": [m.get("identity_fit", 0), m.get("strategy_coverage", 0),
+                                                              m.get("competitor_pressure", 0)]} for m in matrix]},
+        {"type": "text", "title": "Where effort is misdirected",
+         "bullets": [f"{w.get('title')} — {w.get('evidence', '')}" for w in cx.get("weaknesses", [])][:6]},
+        {"type": "text", "title": "Where the maison can win",
+         "bullets": [f"{o.get('title')} — {o.get('value_at_stake', '')}" for o in cx.get("opportunities", [])][:6]},
+        {"type": "section", "title": "The strategy", "subtitle": (st.get("north_star") or {}).get("concept", "")},
+        {"type": "text", "title": "North star", "body": f"{(st.get('north_star') or {}).get('concept', '')}\n\n"
+                                                        f"{(st.get('north_star') or {}).get('why_it_is_ownable', '')}"},
+        {"type": "bars", "title": "Redirecting resources (share of budget moved)",
+         "bars": [{"label": f"{r.get('from')} → {r.get('to')}", "value": r.get("shift_pct", 0)} for r in st.get("reallocation", [])]},
+        {"type": "bars", "title": "Target allocation (%)",
+         "bars": [{"label": t.get("line", ""), "value": t.get("pct", 0)} for t in st.get("target_allocation", [])]},
+    ]
+    for p in st.get("archetype_plays", []):
+        slides.append({"type": "text", "title": f"{p.get('archetype')}: {p.get('experiential_pillar', '')}",
+                       "body": f"{p.get('objective', '')}\n\nCadence: {p.get('cadence', '')}",
+                       "bullets": [f"{e.get('name')} — {e.get('format')} · emotional impact {e.get('emotional_impact')}/5 · "
+                                   f"{e.get('commercial_kpi')}: {e.get('expected_result')}"
+                                   for e in p.get("signature_experiences", [])]})
+    slides += [
+        {"type": "text", "title": "Twelve-month roadmap",
+         "bullets": [f"{r.get('quarter')}: {'; '.join(r.get('initiatives', []))}" for r in st.get("roadmap", [])]},
+        {"type": "text", "title": "Measuring emotion and commerce",
+         "body": "Emotional: " + "; ".join((st.get("kpis") or {}).get("emotional", [])),
+         "bullets": ["Commercial: " + k for k in (st.get("kpis") or {}).get("commercial", [])]},
+        {"type": "closing", "title": "The first 90 days", "bullets": st.get("quick_wins", [])},
+    ]
+    return slides
+
+
+def from_prospect(p):
+    """Pitch deck built on the prospect's own public evidence."""
+    d, pt = p["dossier"] or {}, p["pitch"] or {}
+    pitch = pt.get("pitch", {})
+    signals = d.get("problem_signals", [])
+    slides = [
+        {"type": "cover", "title": f"{p['company']} × Vestige", "subtitle": f"A point of view · {date.today():%B %Y}"},
+        {"type": "quote", "title": "", "body": pitch.get("hook", "")},
+        {"type": "text", "title": "What we observe", "body": pt.get("the_problem", ""),
+         "bullets": [s.get("signal", "") for s in signals[:5]]},
+        {"type": "text", "title": "The market around you",
+         "bullets": [f"{c.get('name')}: {c.get('recent_actions', '')}" for c in d.get("competitors", [])[:5]]},
+        {"type": "text", "title": "Who your clients are becoming",
+         "bullets": [f"{a.get('name')} — {a.get('rationale', '')}" for a in d.get("likely_archetypes", [])[:5]]},
+        {"type": "section", "title": "Where we see the opportunity", "subtitle": pitch.get("angle", "")},
+    ]
+    for h in pt.get("opportunity_hypotheses", [])[:4]:
+        slides.append({"type": "text", "title": h.get("hypothesis", ""), "body": h.get("evidence", ""),
+                       "bullets": [f"Vestige: {h.get('vestige_answer', '')}", f"Value: {h.get('value', '')}"]})
+    slides += [
+        {"type": "text", "title": "Why Vestige", "bullets": pitch.get("proof_points", [])},
+        {"type": "text", "title": "A first step", "body": pitch.get("entry_offer", "")},
+        {"type": "closing", "title": "Next steps", "bullets": pt.get("next_steps", [])},
+    ]
     return slides
 
 
@@ -160,6 +255,36 @@ def to_pptx(deck, accent="#8C6A4A"):
             chart.category_axis.tick_labels.font.size = Pt(12)
             chart.value_axis.visible = False
             chart.value_axis.has_major_gridlines = False
+        elif t == "matrix" and s.get("rows"):
+            cols = s.get("columns", [])
+            rows = s["rows"]
+            tbl = slide.shapes.add_table(len(rows) + 1, len(cols) + 1, Inches(0.9), Inches(2.1), Inches(11.5),
+                                         Inches(0.6 * (len(rows) + 1))).table
+            for j, c in enumerate([""] + cols):
+                cell = tbl.cell(0, j)
+                cell.text = str(c)
+                cell.fill.solid()
+                cell.fill.fore_color.rgb = charcoal
+                cell.text_frame.paragraphs[0].font.color.rgb = bone
+                cell.text_frame.paragraphs[0].font.size = Pt(12)
+            for i, r in enumerate(rows, start=1):
+                tbl.cell(i, 0).text = str(r.get("label", ""))
+                tbl.cell(i, 0).text_frame.paragraphs[0].font.size = Pt(12)
+                for j, v in enumerate(r.get("values", []), start=1):
+                    cell = tbl.cell(i, j)
+                    cell.text = str(v)
+                    cell.fill.solid()
+                    try:
+                        level = max(0, min(100, float(v))) / 100
+                    except (TypeError, ValueError):
+                        level = 0
+                    base = (0xF6, 0xF2, 0xEA)
+                    tgt = tuple(int((accent or "#8C6A4A").lstrip("#")[k:k + 2], 16) for k in (0, 2, 4))
+                    from pptx.dml.color import RGBColor
+                    cell.fill.fore_color.rgb = RGBColor(*[int(b + (t - b) * level) for b, t in zip(base, tgt)])
+                    para = cell.text_frame.paragraphs[0]
+                    para.font.size = Pt(13)
+                    para.font.color.rgb = bone if level > .55 else charcoal
         elif t == "quote":
             text(slide, 1.5, 2.5, 10.3, 3.5, f"“{s.get('body', '')}”", 28, charcoal, serif=True)
         else:
