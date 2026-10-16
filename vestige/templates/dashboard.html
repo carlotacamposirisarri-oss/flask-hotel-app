@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% from "partials/items.html" import card with context %}
+{% block content %}
+<header class="hero">
+  <p class="eyebrow">Vestige · Command centre</p>
+  <h1>Relationships that outlast the transaction.</h1>
+  <p class="lede">Every maison you serve, every client you map, every move that grows the practice — in one place.</p>
+</header>
+
+<section class="tiles">
+  <div class="tile"><b>{{ kpis.engagements }}</b><span>Active engagements</span></div>
+  <div class="tile"><b>{{ kpis.clients }}</b><span>Clients mapped</span></div>
+  <div class="tile"><b>{{ kpis.ai_items }}</b><span>Strategic work items</span></div>
+  <div class="tile"><b>{{ kpis.utilisation_pct }}%</b><span>AI suggestions kept</span></div>
+  <div class="tile"><b>{{ kpis.deliverables }}</b><span>Deliverables</span></div>
+</section>
+
+<section class="block">
+  <div class="block-h"><h2>Maisons</h2><a class="btn ghost" href="{{ url_for('v.brand_form') }}">+ New engagement</a></div>
+  <div class="maisons">
+    {% for b in cards %}
+    <a class="maison-card" href="{{ url_for('v.brand', brand_id=b.id) }}" style="--accent: {{ b.accent_color }}">
+      <span class="eyebrow">{{ b.sector }} · {{ b.market }}</span>
+      <h3>{{ b.name }}</h3>
+      <p>{{ b.positioning|truncate(120) }}</p>
+      <div class="mini-stats">
+        <span><b>{{ b.stats.count }}</b> clients</span>
+        <span><b>{{ b.stats.avg_engagement }}</b> engagement</span>
+        <span><b>{{ b.stats.at_risk }}</b> at risk</span>
+        <span><b>{{ b.open_items }}</b> to review</span>
+      </div>
+    </a>
+    {% else %}
+    <div class="empty-state">
+      <h3>Begin with a maison.</h3>
+      <p>Set up the first brand engagement — heritage, codes, archetypes — and the platform will build from there.</p>
+      <a class="btn" href="{{ url_for('v.brand_form') }}">Set up an engagement</a>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+{% if top %}
+<section class="block">
+  <div class="block-h"><h2>Most urgent across the portfolio</h2></div>
+  <div class="items">{% for it in top %}{{ card(it, show_brand=True) }}{% endfor %}</div>
+</section>
+{% endif %}
+{% endblock %}

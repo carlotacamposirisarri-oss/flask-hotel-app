@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="hero small"><p class="eyebrow">Deliverable studio</p><h1>New deliverable</h1></header>
+<form method="get" class="panel inline-form">
+  <label>Source<select name="source" onchange="this.form.submit()">
+    <option value="">Choose…</option>
+    {% for b in brands %}<option value="b:{{ b.id }}" {{ 'selected' if source == 'b:' ~ b.id }}>{{ b.name }} — client engagement</option>{% endfor %}
+    <option value="s:internal" {{ 'selected' if source == 's:internal' }}>Vestige — intelligence report</option>
+    <option value="s:growth" {{ 'selected' if source == 's:growth' }}>Vestige — growth strategy (internal)</option>
+  </select></label>
+</form>
+{% if source %}
+<form method="post" class="panel form">
+  <input type="hidden" name="source" value="{{ source }}">
+  <div class="cols">
+    <label>Title<input name="title" value="{{ (brand.name ~ ' — Relationship Strategy') if brand else ('Vestige — Luxury Client Intelligence Report' if source == 's:internal' else 'Vestige — Growth Strategy') }}"></label>
+    <label>Audience<select name="audience"><option value="client">Client leadership</option><option value="internal">Vestige internal</option><option value="press">Press / thought leadership</option></select></label>
+  </div>
+  <h3>Work to include</h3>
+  <p class="hint">Accepted work is pre-selected. Annotations travel into the deck.</p>
+  <div class="pick">
+    {% for it in items %}
+    <label class="check pick-item"><input type="checkbox" name="item" value="{{ it.id }}" {{ 'checked' if it.status == 'accepted' }}>
+      <span><span class="chip">{{ KINDS[it.kind].label }}</span> <b>{{ it.title }}</b> <small class="muted">{{ it.status }}</small></span></label>
+    {% else %}<p class="empty">No work items for this source yet — generate some first.</p>{% endfor %}
+  </div>
+  <div class="row">
+    <button class="btn ghost" name="compose" value="assemble">Assemble instantly</button>
+    <button class="btn" name="compose" value="ai" data-loading-btn>✦ Compose with AI</button>
+    <select name="provider"><option value="">{{ ai_status.label }} (default)</option><option value="claude" {{ 'disabled' if not ai_status.claude }}>Claude</option><option value="astra" {{ 'disabled' if not ai_status.astra }}>Chat Astra</option></select>
+  </div>
+</form>
+{% endif %}
+{% endblock %}

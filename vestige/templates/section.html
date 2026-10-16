@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% from "partials/items.html" import block with context %}
+{% block title %}{{ title }} · {{ brand.name }}{% endblock %}
+{% block content %}
+<header class="hero small"><p class="eyebrow">{{ brand.name }}</p><h1>{{ title }}</h1><p class="lede">{{ lede }}</p>
+<div class="row"><a class="link" href="?dismissed={{ '0' if request.args.dismissed == '1' else '1' }}">{{ 'Hide' if request.args.dismissed == '1' else 'Show' }} dismissed</a></div></header>
+
+{% if section == 'retention' %}
+<section class="block" id="roadmap">
+  <div class="block-h"><div><h2>Twelve-month roadmap</h2><p class="lede">Initiatives placed by month. Emotional impact in bronze; refine the month on any card.</p></div></div>
+  <div class="roadmap">
+    {% for m, its in timeline.items() %}
+    <div class="month"><h4>{{ ['January','February','March','April','May','June','July','August','September','October','November','December'][m-1] }}</h4>
+      {% for i in its %}<a href="#item-{{ i.id }}" class="pin st-{{ i.status }}"><b>{{ i.title }}</b><small>{{ i.payload.format }}</small>
+        <span class="impact">{% for n in range((i.payload.emotional_impact or 0)|int) %}●{% endfor %}</span><em>{{ i.payload.engagement_lift }}</em></a>{% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% for kind, items in groups.items() %}
+  {{ block(kind, items, brand, manual=kind in ('initiative', 'collaboration', 'story', 'community')) }}
+{% endfor %}
+{% endblock %}

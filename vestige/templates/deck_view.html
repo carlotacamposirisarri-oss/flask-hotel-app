@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ deck.title }}</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='vestige.css') }}">
+<style>:root{--accent: {{ brand.accent_color if brand else '#8C6A4A' }};}</style>
+</head>
+<body class="present">
+{% from "partials/slide.html" import slide %}
+<div class="present-bar"><a href="{{ url_for('v.deck_edit', deck_id=deck.id) }}">← Edit</a><button onclick="window.print()">Print / Save as PDF</button><a href="{{ url_for('v.deck_pptx', deck_id=deck.id) }}">PowerPoint</a></div>
+{% for s in deck.slides %}{{ slide(s, deck, brand, loop.index, loop.length) }}{% endfor %}
+</body></html>

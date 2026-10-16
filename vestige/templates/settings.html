@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="hero small"><p class="eyebrow">Settings</p><h1>AI connection</h1>
+<p class="lede">Claude is the primary strategist; Chat Astra can be selected per task or used as fallback. Keys are stored on this server only (environment variables or <code>instance/secrets.json</code>) and are never sent to the browser.</p></header>
+
+<form method="post" class="panel form">
+  <div class="cols">
+    <fieldset>
+      <legend>Claude <span class="status {{ 'live' if ai_status.claude }}">{{ 'connected' if ai_status.claude else 'not connected' }}</span></legend>
+      <label>Anthropic API key<input type="password" name="anthropic_api_key" autocomplete="off" placeholder="{{ '•••••••• stored' if ai_status.claude else 'sk-ant-…' }}"></label>
+      {% if ai_status.claude %}<label class="check"><input type="checkbox" name="clear_anthropic_api_key"> Remove stored key</label>{% endif %}
+      <label>Model<select name="claude_model">{% for id, name in models.items() %}<option value="{{ id }}" {{ 'selected' if ai_status.claude_model == id }}>{{ name }}</option>{% endfor %}</select></label>
+      <label>Depth (effort)<select name="claude_effort">{% for e in ['low','medium','high','xhigh','max'] %}<option {{ 'selected' if ai_status.claude_effort == e }}>{{ e }}</option>{% endfor %}</select></label>
+      <p class="hint">High is a good default for strategy work. Max is slower and costlier.</p>
+    </fieldset>
+    <fieldset>
+      <legend>Chat Astra <span class="status {{ 'live' if ai_status.astra }}">{{ 'connected' if ai_status.astra else 'not connected' }}</span></legend>
+      <label>API key<input type="password" name="astra_api_key" autocomplete="off" placeholder="{{ '•••••••• stored' if ai_status.astra else 'key' }}"></label>
+      {% if ai_status.astra %}<label class="check"><input type="checkbox" name="clear_astra_api_key"> Remove stored key</label>{% endif %}
+      <label>Base URL (OpenAI-compatible)<input name="astra_base_url" value="{{ ai_status.astra_base_url }}" placeholder="https://api.your-astra-host.com/v1"></label>
+      <label>Model<input name="astra_model" value="{{ ai_status.astra_model }}" placeholder="astra-model-name"></label>
+    </fieldset>
+  </div>
+  <fieldset>
+    <legend>Routing</legend>
+    <label>Primary model<select name="primary"><option value="claude" {{ 'selected' if ai_status.primary == 'claude' }}>Claude</option><option value="astra" {{ 'selected' if ai_status.primary == 'astra' }}>Chat Astra</option></select></label>
+    <label class="check"><input type="checkbox" name="fallback" {{ 'checked' if ai_status.fallback }}> Fall back to the other model if the primary fails</label>
+  </fieldset>
+  <button class="btn">Save settings</button>
+</form>
+
+<div class="panel row">
+  <form method="post" action="{{ url_for('v.settings_test') }}" data-loading><input type="hidden" name="provider" value="claude"><button class="btn ghost" {{ 'disabled' if not ai_status.claude }}>Test Claude</button></form>
+  <form method="post" action="{{ url_for('v.settings_test') }}" data-loading><input type="hidden" name="provider" value="astra"><button class="btn ghost" {{ 'disabled' if not ai_status.astra }}>Test Chat Astra</button></form>
+</div>
+{% endblock %}

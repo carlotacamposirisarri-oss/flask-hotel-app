@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<header class="hero small"><p class="eyebrow">Deliverable studio</p><h1>From analysis to a deck worth presenting.</h1>
+<p class="lede">Any strategy, roadmap, audit, competitive read, intelligence brief or growth plan becomes a client-ready presentation — assembled instantly or composed by the AI — then refined, printed to PDF or exported to PowerPoint.</p>
+<div class="row"><a class="btn" href="{{ url_for('v.deck_new') }}">+ New deliverable</a></div></header>
+<div class="maisons">
+  {% for d in decks %}
+  <div class="maison-card deck-card">
+    <span class="eyebrow">{{ d.brand_name or 'Vestige internal' }} · {{ d.slides|length }} slides · {{ d.model }}</span>
+    <h3>{{ d.title }}</h3>
+    <p class="muted">Updated {{ d.updated_at[:10] }}</p>
+    <div class="row"><a class="link" href="{{ url_for('v.deck_edit', deck_id=d.id) }}">Edit</a><a class="link" href="{{ url_for('v.deck_view', deck_id=d.id) }}" target="_blank">Present / PDF</a><a class="link" href="{{ url_for('v.deck_pptx', deck_id=d.id) }}">PowerPoint</a>
+    <form method="post" action="{{ url_for('v.deck_delete', deck_id=d.id) }}" onsubmit="return confirm('Delete this deck?')" style="display:inline"><button class="link danger">Delete</button></form></div>
+  </div>
+  {% else %}<p class="empty">No deliverables yet.</p>{% endfor %}
+</div>
+{% endblock %}

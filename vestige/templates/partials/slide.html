@@ -1,0 +1,29 @@
+{% macro slide(s, deck, brand, n, total) %}
+<section class="slide t-{{ s.type }}">
+  <span class="sl-mark">VESTIGE{% if brand %} <em>for {{ brand.name }}</em>{% endif %}</span>
+  {% if s.type in ('cover', 'section', 'closing') %}
+    <div class="sl-center">
+      <h1>{{ s.title }}</h1>
+      {% if s.subtitle %}<p class="sl-sub">{{ s.subtitle }}</p>{% endif %}
+      {% if s.bullets %}<ul>{% for b in s.bullets %}<li>{{ b }}</li>{% endfor %}</ul>{% endif %}
+    </div>
+  {% elif s.type == 'metrics' %}
+    <h2>{{ s.title }}</h2>
+    <div class="sl-metrics">{% for m in s.metrics or [] %}<div><b>{{ m.value }}</b><span>{{ m.label }}</span></div>{% endfor %}</div>
+  {% elif s.type == 'bars' %}
+    <h2>{{ s.title }}</h2>
+    {% set peak = (s.bars|map(attribute='value')|max) if s.bars else 1 %}
+    <div class="sl-bars">{% for b in s.bars or [] %}<div><span>{{ b.label }}</span><i style="width: {{ (90 * b.value / (peak or 1))|round }}%"></i><em>{{ b.value }}</em></div>{% endfor %}</div>
+  {% elif s.type == 'quote' %}
+    <blockquote>“{{ s.body }}”</blockquote>
+    {% if s.title %}<p class="sl-sub">— {{ s.title }}</p>{% endif %}
+  {% else %}
+    <h2>{{ s.title }}</h2>
+    <div class="sl-cols {{ 'two' if s.body and s.bullets }}">
+      {% if s.body %}<div class="sl-body">{% for p in s.body.split('\n\n') %}<p>{{ p }}</p>{% endfor %}</div>{% endif %}
+      {% if s.bullets %}<ul>{% for b in s.bullets %}<li>{{ b }}</li>{% endfor %}</ul>{% endif %}
+    </div>
+  {% endif %}
+  <span class="sl-foot">{{ deck.title }} · {{ n }} / {{ total }}</span>
+</section>
+{% endmacro %}

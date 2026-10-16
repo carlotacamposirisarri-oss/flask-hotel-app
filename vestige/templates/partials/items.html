@@ -1,0 +1,115 @@
+{# Reusable blocks for AI-generated work items #}
+
+{% macro dots(n, label) -%}
+<span class="dots" title="{{ label }} {{ n }}/5">{% for i in range(5) %}<i class="{{ 'f' if i < n }}"></i>{% endfor %}<em>{{ label }}</em></span>
+{%- endmacro %}
+
+{% macro value(v) -%}
+  {%- if v is mapping -%}
+    <dl class="mini">{% for k, x in v.items() %}<dt>{{ k|label }}</dt><dd>{{ value(x) }}</dd>{% endfor %}</dl>
+  {%- elif v is iterable and v is not string -%}
+    <ul>{% for x in v %}<li>{% if x is mapping %}{% for k, y in x.items() %}<b>{{ k|label }}:</b> {{ y }}{% if not loop.last %} · {% endif %}{% endfor %}{% else %}{{ x }}{% endif %}</li>{% endfor %}</ul>
+  {%- else -%}{{ v }}{%- endif -%}
+{%- endmacro %}
+
+{% macro generator(kind, brand=None, label=None) %}
+{% set spec = KINDS[kind] %}
+<form class="gen" method="post" action="{{ url_for('v.generate', kind=kind) }}" data-loading>
+  {% if brand %}<input type="hidden" name="brand_id" value="{{ brand.id }}">{% endif %}
+  <input type="hidden" name="next" value="{{ path }}#{{ kind }}">
+  {% if spec.input %}
+    <textarea name="extra" rows="{{ 3 if spec.input_required else 1 }}" placeholder="{{ spec.input }}" {{ 'required' if spec.input_required }}></textarea>
+  {% endif %}
+  <div class="gen-row">
+    <select name="provider" aria-label="Model">
+      <option value="">{{ ai_status.label }} (default)</option>
+      <option value="claude" {{ 'disabled' if not ai_status.claude }}>Claude</option>
+      <option value="astra" {{ 'disabled' if not ai_status.astra }}>Chat Astra</option>
+    </select>
+    <button class="btn">✦ {{ label or ('Generate ' ~ spec.plural|lower) }}</button>
+  </div>
+</form>
+{% endmacro %}
+
+{% macro card(item, show_brand=False) %}
+{% set spec = KINDS[item.kind] %}
+<article class="item st-{{ item.status }}" id="item-{{ item.id }}">
+  <header>
+    <span class="chip">{{ spec.label }}</span>
+    {% if item.payload.category %}<span class="chip soft">{{ item.payload.category }}</span>{% endif %}
+    {% if item.payload.severity %}<span class="chip sev-{{ item.payload.severity|lower }}">{{ item.payload.severity }}</span>{% endif %}
+    {% if item.payload.threat_level %}<span class="chip sev-{{ item.payload.threat_level|lower }}">threat {{ item.payload.threat_level }}</span>{% endif %}
+    {% if item.payload.compatibility %}<span class="chip">fit {{ item.payload.compatibility }}</span>{% endif %}
+    {% if item.status != 'proposed' %}<span class="chip st">{{ item.status }}</span>{% endif %}
+    {% if item.priority %}<span class="chip star">★ priority</span>{% endif %}
+    <span class="grow"></span>
+    {{ dots(item.urgency, 'urgency') }} {{ dots(item.impact, 'impact') }}
+  </header>
+  <h3>{{ item.title }}</h3>
+  {% if item.summary %}<p class="summary">{{ item.summary }}</p>{% endif %}
+  {% if item.payload %}
+  <details class="fields" {{ 'open' if item.kind in ('prospect', 'event_design') }}>
+    <summary>Details</summary>
+    <dl>
+      {% for k, v in item.payload.items() if v not in (None, '', []) %}
+        <dt>{{ k|label }}</dt><dd>{{ value(v) }}</dd>
+      {% endfor %}
+    </dl>
+  </details>
+  {% endif %}
+  {% if item.annotation %}<p class="note"><b>Vestige note</b> {{ item.annotation }}</p>{% endif %}
+  <footer>
+    <span class="stamp">{{ item.model or 'manual' }} · filtered through {{ item.brand_label }}{% if show_brand and item.brand_name %} · {{ item.brand_name }}{% endif %}</span>
+    <span class="grow"></span>
+    <form method="post" action="{{ url_for('v.item_update', item_id=item.id) }}" class="acts">
+      <input type="hidden" name="next" value="{{ path }}#item-{{ item.id }}">
+      {% if item.status != 'accepted' %}<button name="action" value="accept" class="ok">Accept</button>{% endif %}
+      {% if item.status != 'dismissed' %}<button name="action" value="dismiss">Dismiss</button>{% else %}<button name="action" value="restore">Restore</button>{% endif %}
+      <button name="action" value="star" title="Toggle priority">★</button>
+    </form>
+    <button class="link" onclick="this.closest('article').querySelector('.edit').toggleAttribute('hidden')">Refine</button>
+  </footer>
+  <form class="edit" method="post" action="{{ url_for('v.item_update', item_id=item.id) }}" hidden>
+    <input type="hidden" name="next" value="{{ path }}#item-{{ item.id }}">
+    <label>Title<input name="title" value="{{ item.title }}"></label>
+    <label>Summary<textarea name="summary" rows="3">{{ item.summary }}</textarea></label>
+    <label>Annotation for the client deck<textarea name="annotation" rows="2" placeholder="Your refinement, nuance or caveat">{{ item.annotation }}</textarea></label>
+    {% if spec.uses_month %}
+    <label>Month<select name="month">{% for m in range(1, 13) %}<option value="{{ m }}" {{ 'selected' if item.month == m }}>{{ ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m-1] }}</option>{% endfor %}</select></label>
+    {% endif %}
+    <div class="row">
+      <button class="btn" name="action" value="edit">Save</button>
+      <button class="link danger" name="action" value="delete" onclick="return confirm('Delete this item?')">Delete</button>
+    </div>
+  </form>
+</article>
+{% endmacro %}
+
+{% macro block(kind, items, brand=None, intro=None, manual=False) %}
+{% set spec = KINDS[kind] %}
+<section class="block" id="{{ kind }}">
+  <div class="block-h">
+    <div>
+      <h2>{{ spec.plural }}</h2>
+      {% if intro %}<p class="lede">{{ intro }}</p>{% endif %}
+    </div>
+    <span class="count">{{ items|length }}</span>
+  </div>
+  {{ generator(kind, brand) }}
+  {% if manual %}
+  <details class="manual"><summary>+ Add your own</summary>
+    <form method="post" action="{{ url_for('v.item_new') }}">
+      <input type="hidden" name="kind" value="{{ kind }}">{% if brand %}<input type="hidden" name="brand_id" value="{{ brand.id }}">{% endif %}
+      <input type="hidden" name="next" value="{{ path }}#{{ kind }}">
+      <input name="title" placeholder="Title" required>
+      <textarea name="summary" rows="2" placeholder="Summary"></textarea>
+      {% if spec.uses_month %}<select name="month">{% for m in range(1, 13) %}<option value="{{ m }}">Month {{ m }}</option>{% endfor %}</select>{% endif %}
+      <button class="btn">Add</button>
+    </form>
+  </details>
+  {% endif %}
+  <div class="items">
+    {% for it in items %}{{ card(it) }}{% else %}<p class="empty">Nothing here yet. Generate a first draft — you stay in control of what is kept.</p>{% endfor %}
+  </div>
+</section>
+{% endmacro %}

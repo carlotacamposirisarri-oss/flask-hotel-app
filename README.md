@@ -1,3 +1,5 @@
+> **New:** this repository also contains **Vestige Intelligence** — see [`vestige/README.md`](vestige/README.md).
+
 # Luxury Hotel Finder - Flask Web Application
 
 A modern, luxury-themed web application for discovering 5-star hotels worldwide. Built with Flask, integrated with Amadeus Hotel Search API, and featuring a responsive dark-theme UI with premium amenities and pricing information.

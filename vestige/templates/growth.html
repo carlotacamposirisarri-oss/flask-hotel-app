@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% from "partials/items.html" import block with context %}
+{% block content %}
+<header class="hero small"><p class="eyebrow">Vestige · Growth studio</p><h1>Growing the practice, with the same rigour we give our clients.</h1>
+<p class="lede">The platform reads Vestige's own body of work — engagements, recurring client needs, intelligence patterns, KPIs and goals — and recommends where to grow next.</p>
+<div class="row"><a class="btn ghost" href="{{ url_for('v.deck_new', source='s:growth') }}">Export as internal strategy deck →</a></div></header>
+
+<section class="tiles">
+  <div class="tile"><b>{{ kpis.engagements }}</b><span>Active engagements</span></div>
+  <div class="tile"><b>{{ kpis.clients }}</b><span>Clients mapped</span></div>
+  <div class="tile"><b>{{ kpis.deliverables }}</b><span>Deliverables produced</span></div>
+  <div class="tile"><b>{{ kpis.utilisation_pct }}%</b><span>AI insight utilisation</span></div>
+  <div class="tile"><b>{{ kpis.crm_rows }}</b><span>CRM records ingested</span></div>
+</section>
+
+<div class="grid2">
+  <section class="panel">
+    <h3>Practice KPIs</h3>
+    <p class="hint">Log revenue, pipeline, retention, service mix — anything you track monthly.</p>
+    {% for name, rows in series.items() %}
+      {% set peak = rows|map(attribute='value')|max %}
+      <div class="kpi"><div class="kpi-h"><b>{{ name }}</b><span>{{ rows[-1].value|round(1) }} {{ rows[-1].unit }} <small>{{ rows[-1].period }}</small></span></div>
+        <div class="spark">{% for r in rows %}<i style="height: {{ (100 * r.value / (peak or 1))|round }}%" title="{{ r.period }}: {{ r.value }} {{ r.unit }}"></i>{% endfor %}</div></div>
+    {% else %}<p class="empty">No KPIs logged yet.</p>{% endfor %}
+    <form method="post" class="inline-form">
+      <input type="hidden" name="action" value="kpi">
+      <input name="period" type="month" value="{{ today.strftime('%Y-%m') }}">
+      <input name="name" placeholder="KPI (e.g. Revenue)" list="kpinames" required>
+      <datalist id="kpinames">{% for n in ['Revenue','Pipeline value','Active retainers','Client retention %','Proposals sent','Win rate %','Average engagement fee','Reports published'] %}<option>{{ n }}</option>{% endfor %}</datalist>
+      <input name="value" type="number" step="any" placeholder="Value" required>
+      <input name="unit" placeholder="Unit (€, %, #)">
+      <button class="btn ghost">Log</button>
+    </form>
+  </section>
+  <section class="panel">
+    <h3>Growth goals</h3>
+    {% for g in goals %}
+      {% set pct = (100 * g.current / g.target)|round|int if g.target else 0 %}
+      <div class="goal st-{{ g.status }}">
+        <div class="kpi-h"><b>{{ g.title }}</b><span>{{ g.current|round(1) }} / {{ g.target|round(1) }} {{ g.metric }} · due {{ g.due }}</span></div>
+        <span class="meter"><i style="width: {{ [pct, 100]|min }}%"></i></span>
+        <form method="post" class="inline-form small"><input type="hidden" name="action" value="goal_update"><input type="hidden" name="id" value="{{ g.id }}">
+          <input name="current" type="number" step="any" value="{{ g.current }}"><select name="status">{% for s in ['active','achieved','paused'] %}<option {{ 'selected' if g.status == s }}>{{ s }}</option>{% endfor %}</select><button class="link">Update</button></form>
+      </div>
+    {% else %}<p class="empty">Set a first goal — the AI will suggest course corrections against it.</p>{% endfor %}
+    <details class="manual"><summary>+ New goal</summary>
+      <form method="post" class="form"><input type="hidden" name="action" value="goal">
+        <label>Goal<input name="title" required placeholder="Sign 3 haute horlogerie retainers"></label>
+        <div class="cols3"><label>Metric<input name="metric" placeholder="retainers"></label><label>Target<input name="target" type="number" step="any"></label><label>Current<input name="current" type="number" step="any" value="0"></label></div>
+        <label>Due<input name="due" type="date"></label>
+        <label>Notes<textarea name="notes" rows="2"></textarea></label>
+        <button class="btn">Add goal</button></form></details>
+  </section>
+</div>
+
+{{ block('growth_plan', groups.growth_plan, None, 'Which sectors to target, which services to package, partnerships, thought leadership, pricing and geography — sequenced.') }}
+{{ block('radar', groups.radar, None, 'New business opportunities detected in the patterns of your own engagements.') }}
+{{ block('health_check', groups.health_check, None, "An honest audit of how Vestige itself operates and positions.") }}
+{{ block('course_correction', groups.course_correction, None, 'Progress against each active goal, and what to adjust.') }}
+{% endblock %}
